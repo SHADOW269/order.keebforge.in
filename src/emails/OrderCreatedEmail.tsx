@@ -5,7 +5,7 @@ import {
   Preview,
   Body,
   Container,
-} from "@react-email/components";
+} from "react-email";
 import {
   AccentGraphics,
   BetterHeader,

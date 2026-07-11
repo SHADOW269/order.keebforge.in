@@ -5,7 +5,7 @@ import {
   Body,
   Container,
   Hr,
-} from "@react-email/components";
+} from "react-email";
 import type { CSSProperties } from "react";
 import {
   EmailHeader,

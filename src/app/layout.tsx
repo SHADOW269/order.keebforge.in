@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import { Providers } from "@/components/Providers";
 import { NumberInputGuard } from "@/components/NumberInputGuard";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -52,6 +54,8 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
         <NumberInputGuard />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -1,5 +1,5 @@
 import { getResend } from "@/lib/resend";
-import { render } from "@react-email/components";
+import { render } from "react-email";
 import { env } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import OrderCreatedEmail from "@/emails/OrderCreatedEmail";
