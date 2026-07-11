@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { syncTrackingRecord } from "@/lib/tracking-sync";
 import { jsonSuccess, jsonError, jsonServerError, parseJsonBody } from "@/lib/api-response";
 import { rateLimitMiddleware, getClientIp } from "@/lib/rate-limit";
+import { sendOrderCreatedEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   const rateLimitResponse = rateLimitMiddleware(request, { max: 30, windowMs: 60_000 }, "orders:create");
@@ -62,6 +63,12 @@ export async function POST(request: Request) {
     }
     customerId = newCustomer.id;
   }
+
+  await supabaseAdmin
+    .from("addresses")
+    .update({ is_default: false })
+    .eq("customer_id", customerId)
+    .eq("is_default", true);
 
   const { data: address, error: addressError } = await supabaseAdmin
     .from("addresses")
@@ -239,6 +246,16 @@ export async function POST(request: Request) {
     await supabaseAdmin.from("orders").delete().eq("id", orderId);
     return jsonServerError("Failed to sync tracking record. Order was not created.");
   }
+
+  sendOrderCreatedEmail({
+    customerName: (body.customer_name as string).trim(),
+    customerEmail: email,
+    orderNumber,
+    status: (body.current_status as string) || "Order Received",
+    products: products.map((p) => ({ type: p.type, name: p.name })),
+    createdAt: new Date().toISOString(),
+    serviceType: (body.service_type as string) || "Build Service",
+  });
 
   return jsonSuccess({ order }, 201);
 }

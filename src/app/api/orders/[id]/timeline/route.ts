@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { syncTrackingRecord } from "@/lib/tracking-sync";
 import { jsonSuccess, jsonError, jsonServerError, parseJsonBody } from "@/lib/api-response";
 import { rateLimitMiddleware } from "@/lib/rate-limit";
+import { sendTimelineUpdateEmail } from "@/lib/email";
 
 export async function POST(
   request: Request,
@@ -48,6 +49,12 @@ export async function POST(
     await supabaseAdmin.from("order_timeline").delete().eq("id", update.id);
     return jsonServerError("Failed to sync tracking record. Update was not saved.");
   }
+
+  sendTimelineUpdateEmail({
+    orderId: id,
+    status: body.status as string,
+    note: (body.note as string) || null,
+  });
 
   return jsonSuccess({ update });
 }

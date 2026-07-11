@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/api-auth";
 import { syncTrackingRecord } from "@/lib/tracking-sync";
 import { jsonSuccess, jsonError, jsonNotFound, jsonServerError, parseJsonBody } from "@/lib/api-response";
 import { rateLimitMiddleware } from "@/lib/rate-limit";
+import { sendStatusChangedEmail } from "@/lib/email";
 
 export async function PATCH(
   request: Request,
@@ -22,13 +23,15 @@ export async function PATCH(
 
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("orders")
-    .select("id, customer_id, address_id")
+    .select("id, customer_id, address_id, current_status, order_number")
     .eq("id", id)
     .single();
 
   if (fetchError || !existing) {
     return jsonNotFound("Order not found.");
   }
+
+  const previousStatus = existing.current_status;
 
   if (body.customer_name !== undefined || body.customer_email !== undefined ||
       body.customer_phone !== undefined || body.discord_username !== undefined) {
@@ -221,6 +224,17 @@ export async function PATCH(
     await syncTrackingRecord(id);
   } catch {
     return jsonServerError("Failed to sync tracking record. Changes were not saved.");
+  }
+
+  if (
+    body.current_status !== undefined &&
+    body.current_status !== previousStatus
+  ) {
+    sendStatusChangedEmail({
+      orderId: id,
+      previousStatus: previousStatus,
+      newStatus: body.current_status as string,
+    });
   }
 
   return jsonSuccess({ id });
