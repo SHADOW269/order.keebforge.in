@@ -5,21 +5,21 @@
 ### Supabase Won't Start
 
 ```bash
-supabase start
+npx supabase start
 # Error: Cannot connect to the Docker daemon
 ```
 
 **Fix:** Start Docker Desktop/Docker daemon first.
 
 ```bash
-supabase start
+npx supabase start
 # Error: Port 54321 already in use
 ```
 
 **Fix:** Change port in `supabase/config.toml` or stop the process using that port.
 
 ```bash
-supabase start
+npx supabase start
 # Takes forever / downloads images every time
 ```
 
@@ -28,25 +28,28 @@ supabase start
 ### Migration Failures
 
 ```
-supabase db push
+npx supabase db push
 # Error: relation "public.orders" already exists
 ```
 
 **Fix:** The migration was partially applied. Use repair:
 
 ```bash
-supabase migration repair --status applied 001
+npx supabase migration repair --status applied 001
 # Then retry
+npx supabase db push
 ```
 
 ```
-supabase db push
+npx supabase db push
 # Error: syntax error at or near "IF"
 ```
 
-**Fix:** Migration 008 uses `ALTER VIEW IF EXISTS` which requires PostgreSQL 16+. Either:
-- Skip 008 and use 009 instead
-- Or run on PG16+ (Supabase local config uses PG17 by default — check `config.toml`)
+**Fix:** Check the migration SQL for syntax issues. If the error is in a specific migration, you can reset and reapply from scratch:
+
+```bash
+npx supabase db reset
+```
 
 ### Docker Issues
 

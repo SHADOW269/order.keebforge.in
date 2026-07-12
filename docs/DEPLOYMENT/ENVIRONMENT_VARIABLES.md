@@ -47,7 +47,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIs...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
 ```
 
-Obtain local keys by running `supabase status` in the `supabase/` directory.
+Obtain local keys by running `npx supabase status` from the project root.
 
 ### Production — Vercel Environment Variables
 

@@ -38,14 +38,11 @@ docker compose version
 #### Supabase CLI
 
 ```bash
-# macOS (Homebrew)
-brew install supabase/tap/supabase
-
-# npm (cross-platform)
+# npm (cross-platform, recommended)
 npm install -g supabase
 
-# Linux (other)
-# See https://supabase.com/docs/guides/cli/getting-started
+# macOS (Homebrew)
+brew install supabase/tap/supabase
 ```
 
 Verify:
@@ -57,26 +54,22 @@ supabase --version
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/keebforge.git
-cd keebforge
+git clone https://github.com/SHADOW269/order.keebforge.in.git
+cd order.keebforge.in
 ```
-
-The repository has two top-level directories:
-- `order.keebforge.in/` — Next.js application
-- `supabase/` — Database migrations and config
 
 ### 3. Install Dependencies
 
 ```bash
-cd order.keebforge.in
 npm install
 ```
 
 ### 4. Start Local Supabase
 
+All Supabase commands are run from the project root (where `supabase/` directory lives):
+
 ```bash
-cd ../supabase
-supabase start
+npx supabase start
 ```
 
 This starts Docker containers for:
@@ -93,7 +86,7 @@ This starts Docker containers for:
 ### 5. Get Local API Keys
 
 ```bash
-supabase status
+npx supabase status
 ```
 
 Look for:
@@ -107,8 +100,7 @@ service_role key: eyJhbGciOiJIUzI1NiIs...
 ### 6. Configure Environment Variables
 
 ```bash
-cd ../order.keebforge.in
-cp .env.local.example .env.local
+cp .env.example .env.local
 ```
 
 Edit `.env.local`:
@@ -122,11 +114,10 @@ SUPABASE_SERVICE_ROLE_KEY=<service-role-key-from-supabase-status>
 ### 7. Run Migrations
 
 ```bash
-cd ../supabase
-supabase db push
+npx supabase db push
 ```
 
-This applies all migration files (001–009) to the local database.
+This applies `001_initial_schema.sql` to the local database.
 
 ### 8. Seed Admin Profile
 
@@ -150,11 +141,23 @@ If no user exists yet, first sign up via the app at `http://localhost:3000/login
 ### 9. Start Development Server
 
 ```bash
-cd ../order.keebforge.in
 npm run dev
 ```
 
 The app is available at **http://localhost:3000**.
+
+## Quick Reference
+
+All Supabase commands should be run from the project root:
+
+```bash
+npx supabase start          # Start local services
+npx supabase stop           # Stop local services
+npx supabase status         # Show running services + keys
+npx supabase db push        # Apply migrations
+npx supabase reset          # Reset database and reapply migrations
+npx supabase migration repair --status applied 001  # Mark migration as applied
+```
 
 ## Common Issues
 
@@ -196,11 +199,11 @@ npm install -g supabase
 
 ### Migration failures
 
-If `supabase db push` fails, check the specific error message. Common causes:
+If `npx supabase db push` fails, check the specific error message. Common causes:
 
 - **Missing extensions** — Ensure Docker has network access to download PostgreSQL extensions
-- **Syntax errors** — The most recent migration (008) uses PG16 syntax (`ALTER VIEW IF EXISTS`). Use 009 instead.
-- **Already applied migrations** — If you've partially applied migrations, use `supabase migration repair` to mark them as applied
+- **Already applied migrations** — If you've partially applied migrations, use `npx supabase migration repair` to mark them as applied
+- **Schema conflicts** — If tables already exist from manual SQL runs, use `npx supabase db reset` to start fresh
 
 ### Environment variables missing
 
@@ -211,5 +214,5 @@ If the app loads but shows errors about Supabase connection:
 cat .env.local
 
 # Check keys match supabase status
-supabase status
+npx supabase status
 ```

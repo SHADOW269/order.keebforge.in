@@ -57,91 +57,137 @@ Internal order management dashboard and public order tracking system for KeebFor
 ## Project Structure
 
 ```
-src/
-├── app/                          # Next.js App Router pages
-│   ├── admin/                    # Admin dashboard (protected)
-│   │   ├── layout.tsx            # Force-dynamic for admin routes
-│   │   ├── loading.tsx           # Loading state
-│   │   ├── error.tsx             # Error state
-│   │   ├── page.tsx              # Dashboard overview + stats
-│   │   ├── new/
-│   │   │   └── page.tsx          # Create new order form
-│   │   └── orders/
-│   │       └── [orderNumber]/
-│   │           └── page.tsx      # Edit order page
-│   ├── api/
-│   │   └── orders/
-│   │       ├── route.ts          # POST /api/orders
-│   │       └── [id]/
-│   │           ├── route.ts      # PATCH/DELETE /api/orders/:id
-│   │           └── timeline/
-│   │               └── route.ts  # POST /api/orders/:id/timeline
-│   ├── login/
-│   │   └── page.tsx              # Admin login page
-│   ├── track/
-│   │   └── [orderNumber]/
-│   │       ├── loading.tsx       # Loading state
-│   │       ├── error.tsx         # Error state
-│   │       └── page.tsx          # Public order tracking page
-│   ├── loading.tsx               # Root loading state
-│   ├── error.tsx                 # Root error state
-│   ├── not-found.tsx             # 404 page
-│   ├── layout.tsx                # Root layout
-│   ├── page.tsx                  # Landing page
-│   └── globals.css               # Global styles + CSS variables
+order.keebforge.in/
+├── src/
+│   ├── app/                          # Next.js App Router pages
+│   │   ├── admin/                    # Admin dashboard (protected)
+│   │   │   ├── layout.tsx            # Admin nav bar layout
+│   │   │   ├── loading.tsx           # Loading state
+│   │   │   ├── error.tsx             # Error state
+│   │   │   ├── page.tsx              # Dashboard overview + stats
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx          # Create new order form
+│   │   │   └── orders/
+│   │   │       ├── page.tsx          # All orders list
+│   │   │       └── [orderNumber]/
+│   │   │           └── page.tsx      # Edit order page
+│   │   ├── api/
+│   │   │   └── orders/
+│   │   │       ├── route.ts          # GET/POST /api/orders
+│   │   │       └── [id]/
+│   │   │           ├── route.ts      # PATCH/DELETE /api/orders/:id
+│   │   │           └── timeline/
+│   │   │               └── route.ts  # GET/POST /api/orders/:id/timeline
+│   │   ├── login/
+│   │   │   └── page.tsx              # Admin login page
+│   │   ├── track/
+│   │   │   └── [orderNumber]/
+│   │   │       ├── loading.tsx       # Loading state
+│   │   │       ├── error.tsx         # Error state
+│   │   │       └── page.tsx          # Public order tracking page
+│   │   ├── loading.tsx               # Root loading state
+│   │   ├── error.tsx                 # Root error state
+│   │   ├── not-found.tsx             # 404 page
+│   │   ├── layout.tsx                # Root layout
+│   │   ├── page.tsx                  # Landing page
+│   │   └── globals.css               # Global styles + CSS variables
+│   │
+│   ├── components/
+│   │   ├── admin/
+│   │   │   ├── AdminOrderClient.tsx   # Admin order detail client wrapper
+│   │   │   ├── AllOrdersTable.tsx     # Order listing table
+│   │   │   ├── DashboardCharts.tsx    # Recharts chart components (client)
+│   │   │   └── order-form/           # Admin order form sections (client)
+│   │   │       ├── types.ts
+│   │   │       ├── SearchableSelect.tsx
+│   │   │       ├── CustomerInfoSection.tsx
+│   │   │       ├── ProductsSection.tsx
+│   │   │       ├── ServicesSection.tsx
+│   │   │       ├── LogisticsSection.tsx
+│   │   │       ├── ShippingAddressSection.tsx
+│   │   │       ├── BillingSection.tsx
+│   │   │       ├── CustomWorkSection.tsx
+│   │   │       ├── NotesSection.tsx
+│   │   │       ├── CustomerMessageSection.tsx
+│   │   │       └── AdminToCustomerSection.tsx
+│   │   ├── track/                    # Public tracking components
+│   │   │   ├── TrackDashboard.tsx
+│   │   │   ├── BuildProgress.tsx
+│   │   │   ├── CostSummary.tsx
+│   │   │   ├── LogisticsCard.tsx
+│   │   │   ├── ProductsList.tsx
+│   │   │   ├── RealTimeline.tsx
+│   │   │   ├── ServicesList.tsx
+│   │   │   ├── WarrantyCard.tsx
+│   │   │   └── WorkshopUpdates.tsx
+│   │   ├── ui/                       # Reusable UI primitives
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Card.tsx
+│   │   │   ├── ConfirmDialog.tsx
+│   │   │   ├── Field.tsx
+│   │   │   ├── Loading.tsx
+│   │   │   ├── NetworkIndicator.tsx
+│   │   │   ├── NoteTimeline.tsx
+│   │   │   ├── NotesEditor.tsx
+│   │   │   ├── OrderSearch.tsx
+│   │   │   ├── SectionLabel.tsx
+│   │   │   ├── Skeleton.tsx
+│   │   │   ├── TaskNotification.tsx
+│   │   │   ├── Toast.tsx
+│   │   │   └── TopProgressBar.tsx
+│   │   ├── LogoutButton.tsx
+│   │   ├── NumberInputGuard.tsx
+│   │   ├── Providers.tsx
+│   │   └── SiteNav.tsx
+│   │
+│   ├── constants/                    # Shared constants
+│   │   ├── india-states.ts           # Indian states and UTs
+│   │   ├── order-statuses.ts         # Order lifecycle statuses
+│   │   └── services.ts               # Service catalog (pricing, descriptions)
+│   │
+│   ├── lib/                          # Shared utilities
+│   │   ├── hooks/
+│   │   │   ├── useReducedMotion.ts
+│   │   │   ├── useTaskNotification.ts
+│   │   │   ├── useToast.ts
+│   │   │   └── useTopProgress.ts
+│   │   ├── supabase/
+│   │   │   ├── client.ts             # Browser-side Supabase client
+│   │   │   ├── middleware.ts         # Auth middleware (session refresh)
+│   │   │   └── server.ts             # Server-side Supabase client
+│   │   ├── api-auth.ts               # Admin auth guard for API routes
+│   │   ├── api-mutation.ts           # Client-side mutation helper
+│   │   ├── api-response.ts           # Standardized API response helpers
+│   │   ├── database.types.ts         # Supabase generated types
+│   │   ├── email.ts                  # Email sending via Resend
+│   │   ├── env.ts                    # Environment variable validation
+│   │   ├── monitor.ts                # Performance monitoring
+│   │   ├── order-compute.ts          # Billing/service totals computation
+│   │   ├── rate-limit.ts             # Rate limiting utility
+│   │   ├── resend.ts                 # Resend client setup
+│   │   ├── stats.ts                  # Dashboard statistics computation
+│   │   ├── supabaseAdmin.ts          # Service-role Supabase client
+│   │   ├── tracking-sync.ts          # Sync orders → order_tracking
+│   │   ├── types.ts                  # Shared TypeScript types
+│   │   └── utils.ts                  # cn() helper
+│   │
+│   ├── proxy.ts                      # Next.js middleware (route protection)
+│   ├── emails/                       # React Email templates
+│   └── next.config.ts                # Security headers + build config
 │
-├── components/
-│   ├── admin/
-│   │   ├── DashboardCharts.tsx   # Recharts chart components (client)
-│   │   └── order-form/           # Admin order form sections (client)
-│   │       ├── BillingSection.tsx
-│   │       ├── CollapsibleSection.tsx
-│   │       ├── LogisticsSection.tsx
-│   │       ├── NotesSection.tsx
-│   │       ├── ProductsSection.tsx
-│   │       ├── SearchableSelect.tsx
-│   │       ├── ServicesSection.tsx
-│   │       ├── types.ts          # Re-exports from lib/types
-│   │       └── WorkshopNotesSection.tsx
-│   ├── track/                    # Public tracking components
-│   │   ├── BuildProgress.tsx
-│   │   ├── CostSummary.tsx
-│   │   ├── LogisticsCard.tsx
-│   │   ├── ProductsList.tsx
-│   │   ├── RealTimeline.tsx
-│   │   ├── ServicesList.tsx
-│   │   ├── WarrantyCard.tsx
-│   │   └── WorkshopUpdates.tsx
-│   ├── ui/                       # Reusable UI primitives
-│   │   ├── Badge.tsx
-│   │   ├── Card.tsx
-│   │   ├── ErrorBoundary.tsx
-│   │   ├── Field.tsx
-│   │   ├── Loading.tsx
-│   │   ├── NotesEditor.tsx
-│   │   └── SectionLabel.tsx
-│   └── LogoutButton.tsx          # Admin logout (client)
+├── supabase/                         # Local Supabase development
+│   ├── config.toml                   # Local Supabase configuration
+│   ├── migrations/
+│   │   └── 001_initial_schema.sql    # Full database schema
+│   ├── cleanup.sql                   # Cleanup script for legacy objects
+│   └── snippets/                     # SQL editor snippets
 │
-├── constants/                    # Shared constants
-│   ├── india-states.ts           # Indian states and UTs
-│   ├── order-statuses.ts         # Order lifecycle statuses
-│   └── services.ts               # Service catalog (pricing, descriptions)
-│
-├── lib/                          # Shared utilities
-│   ├── api-auth.ts               # Admin auth guard for API routes
-│   ├── api-response.ts           # Standardized API response helpers
-│   ├── order-compute.ts          # Billing/service totals computation
-│   ├── stats.ts                  # Dashboard statistics computation
-│   ├── supabase/
-│   │   ├── client.ts             # Browser-side Supabase client
-│   │   ├── middleware.ts         # Auth middleware (session refresh)
-│   │   └── server.ts             # Server-side Supabase client
-│   ├── supabaseAdmin.ts          # Service-role Supabase client (admin ops)
-│   ├── tracking-sync.ts          # Sync orders → order_tracking
-│   └── types.ts                  # Shared TypeScript types
-│
-├── middleware.ts                  # Route protection for /admin/*
-└── next.config.ts                # Security headers + build config
+├── docs/                             # Project documentation
+├── scripts/                          # Build scripts (generate-logo.js)
+├── scratch/                          # Debug/scratch scripts
+├── public/                           # Static assets
+├── .env.example                      # Environment variable template
+└── package.json
 ```
 
 ---
@@ -243,15 +289,16 @@ Add a timeline update. Updates the order's `current_status`.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - npm
-- Supabase project (local or cloud)
+- Docker (for local Supabase)
+- Supabase CLI
 
 ### Installation
 
 ```bash
-git clone https://github.com/shadow269/track.keebforge.in.git
-cd track.keebforge.in
+git clone https://github.com/SHADOW269/order.keebforge.in.git
+cd order.keebforge.in
 npm install
 ```
 
@@ -268,11 +315,14 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key (server-only) | Yes |
+| `RESEND_API_KEY` | Resend API key for transactional emails | No |
+| `EMAIL_FROM` | Sender email address | No |
+| `NEXT_PUBLIC_APP_URL` | App URL for building links | No |
 
 ### Development
 
 ```bash
-# Start local Supabase (if using local development)
+# Start local Supabase (from project root)
 npx supabase start
 
 # Start Next.js dev server
@@ -288,123 +338,48 @@ npm run lint
 
 ### Database Setup
 
-Run these SQL statements in your Supabase SQL Editor (Dashboard > SQL Editor) or via `psql`.
+#### Option A: Local Development
 
-#### `orders` table (admin — contains PII)
-
-```sql
-CREATE TABLE orders (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_number varchar(8) NOT NULL UNIQUE,
-  customer_name text NOT NULL DEFAULT '',
-  customer_email text NOT NULL DEFAULT '',
-  customer_phone text NOT NULL DEFAULT '',
-  discord_username text DEFAULT '',
-  service_type text DEFAULT 'Custom Build Service',
-  current_status text NOT NULL DEFAULT 'Order Received',
-  estimated_total numeric DEFAULT 0,
-  keyboard_pcb_model text DEFAULT '',
-  switch_details text DEFAULT '',
-  street_address text DEFAULT '',
-  city text DEFAULT '',
-  state text DEFAULT '',
-  pincode text DEFAULT '',
-  products jsonb DEFAULT '[]'::jsonb,
-  selected_services jsonb DEFAULT '{}'::jsonb,
-  billing jsonb DEFAULT '{}'::jsonb,
-  courier text DEFAULT '',
-  tracking_number text DEFAULT '',
-  tracking_url text DEFAULT '',
-  shipping_status text DEFAULT 'Not Dispatched',
-  estimated_dispatch_date date,
-  estimated_delivery date,
-  warranty_status text DEFAULT '',
-  warranty_start_date date,
-  warranty_end_date date,
-  order_summary text DEFAULT '',
-  internal_notes jsonb DEFAULT '[]'::jsonb,
-  customer_notes jsonb DEFAULT '[]'::jsonb,
-  is_deleted boolean DEFAULT false,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX idx_orders_order_number ON orders (order_number);
-CREATE INDEX idx_orders_status ON orders (current_status);
-CREATE INDEX idx_orders_created ON orders (created_at DESC);
-CREATE INDEX idx_orders_not_deleted ON orders (is_deleted) WHERE is_deleted = false;
+```bash
+npx supabase start
+npx supabase db push
 ```
 
-#### `order_updates` table (timeline entries)
+#### Option B: Production
 
-```sql
-CREATE TABLE order_updates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id uuid NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  status text NOT NULL,
-  note text,
-  created_at timestamptz DEFAULT now()
-);
-
-CREATE INDEX idx_updates_order ON order_updates (order_id, created_at DESC);
+```bash
+npx supabase db push --db-url "postgresql://postgres:<password>@<host>:6543/postgres"
 ```
 
-#### `order_tracking` table (public-safe view — no PII)
+#### Schema Overview
 
-```sql
-CREATE TABLE order_tracking (
-  order_id uuid PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
-  order_number varchar(8) NOT NULL,
-  status text,
-  service_type text,
-  products jsonb DEFAULT '[]'::jsonb,
-  selected_services jsonb DEFAULT '{}'::jsonb,
-  billing_summary jsonb DEFAULT '{}'::jsonb,
-  estimated_total numeric,
-  payment_status text,
-  shipping_status text,
-  tracking_number text,
-  tracking_url text,
-  courier text,
-  estimated_dispatch date,
-  estimated_delivery date,
-  customer_notes jsonb DEFAULT '[]'::jsonb,
-  timeline jsonb DEFAULT '[]'::jsonb,
-  warranty_status text,
-  warranty_start date,
-  warranty_end date,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+The full schema is in `supabase/migrations/001_initial_schema.sql`. Key tables:
 
-CREATE INDEX idx_tracking_order_number ON order_tracking (order_number);
-```
+| Table | Purpose |
+|-------|---------|
+| `orders` | Admin table with full PII |
+| `order_updates` | Timeline entries per order |
+| `order_tracking` | Public-safe denormalized view (no PII) |
 
-#### Row-Level Security
-
-Enable RLS on `order_tracking` (the only table customers query):
+Enable RLS on `order_tracking` for public access:
 
 ```sql
 ALTER TABLE order_tracking ENABLE ROW LEVEL SECURITY;
 
--- Allow anyone to look up an order by its number
 CREATE POLICY "Anyone can view tracking" ON order_tracking
   FOR SELECT USING (true);
 ```
 
 The `orders` and `order_updates` tables should **not** have public RLS policies — they are accessed exclusively through admin API routes using the service_role key.
 
-#### Auto-generation for order numbers
-
-Create a sequence or handle numbering in application code. The app generates `KF######` numbers (e.g. `KF000001`) at creation time via the API route.
-
 ---
 
 ## Environment
 
 - **Frontend**: Vercel (`order.keebforge.in`)
-- **Database**: Supabase
-- **Domains**: `order.keebforge.in` (production)
+- **Database**: Supabase (PostgreSQL 17)
+- **Email**: Resend
+- **Domains**: `order.keebforge.in` (production), `keebforge.in` (apex)
 
 ---
 
@@ -413,7 +388,7 @@ Create a sequence or handle numbering in application code. The app generates `KF
 | Script | Purpose |
 |--------|---------|
 | `npm run dev` | Start development server |
-| `npm run build` | Production build |
+| `npm run build` | Pre-build (generate-logo) + production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run TypeScript type checking |
@@ -423,7 +398,7 @@ Create a sequence or handle numbering in application code. The app generates `KF
 ## Future Roadmap
 
 ### Customer
-- Email notifications
+- Email notifications (in progress — Resend integration)
 - SMS notifications
 - Live shipment tracking
 - Build gallery
@@ -451,4 +426,3 @@ Private project. Copyright © KeebForge. All rights reserved.
 ## Author
 
 **Shadow269** — KeebForge
-# order.keebforge.in

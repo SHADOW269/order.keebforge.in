@@ -24,14 +24,28 @@ From the Supabase Dashboard → **Project Settings → API**:
 
 ## Running Migrations
 
+### Local Development
+
+```bash
+# Push migrations to local database (run from project root)
+npx supabase db push
+```
+
 ### Local → Production
 
 ```bash
 # Push migrations to production
-supabase db push --db-url "postgresql://postgres:<password>@<host>:6543/postgres"
+npx supabase db push --db-url "postgresql://postgres:<password>@<host>:6543/postgres"
 ```
 
 The `--db-url` flag uses the production database connection string from Supabase Dashboard → **Settings → Database → Connection string** (the URI format, with password).
+
+### Reset Local Database
+
+```bash
+# Reset database and reapply all migrations
+npx supabase reset
+```
 
 ### Direct SQL
 
@@ -130,5 +144,5 @@ Not currently used. The application handles all server-side logic via Next.js AP
 - [ ] Service role key stored as Vercel environment variable (never exposed to client)
 - [ ] Email auth provider configured with correct Site URL and Redirect URLs
 - [ ] Admin profile exists in `profiles` table
-- [ ] `supabase db push` applied all migrations
+- [ ] `npx supabase db push` applied all migrations
 - [ ] Rate limiting configured (auth, API)

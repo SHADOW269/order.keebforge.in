@@ -210,14 +210,6 @@ RLS is enabled on all data tables. Policies are documented in [DATABASE/RLS.md](
 
 | File | Purpose |
 |------|---------|
-| `001_schema.sql` | Initial schema — tables, enums, extensions |
-| `002_indexes.sql` | Performance indexes |
-| `003_functions.sql` | PostgreSQL functions |
-| `004_rls.sql` | RLS policies and `is_admin()` function |
-| `005_views.sql` | Admin views |
-| `006_seed.sql` | Seed data (commented out) |
-| `007_grants.sql` | Explicit permission grants |
-| `008_security_fixes.sql` | Security Advisor fixes (PG17 syntax — may fail on PG15) |
-| `009_apply_security_fixes.sql` | PG15-compatible security fixes |
+| `001_initial_schema.sql` | Full schema — tables, enums, extensions, indexes, functions, RLS, views, grants, security fixes |
 
-See [DATABASE/MIGRATIONS.md](./DATABASE/MIGRATIONS.md) for details on each migration.
+See [DATABASE/MIGRATIONS.md](./DATABASE/MIGRATIONS.md) for details.

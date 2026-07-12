@@ -20,10 +20,12 @@
 | Setting | Value |
 |---------|-------|
 | Framework | Next.js |
-| Root Directory | `order.keebforge.in` (if monorepo) |
+| Root Directory | `.` (or `order.keebforge.in` if using a monorepo) |
 | Build Command | `npm run build` (default) |
 | Output Directory | `.next` (default) |
 | Install Command | `npm install` (default) |
+
+**Note:** The `supabase/` directory inside the project is only used for local development. Vercel does not need it during builds.
 
 ### 3. Configure Environment Variables
 

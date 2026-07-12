@@ -82,11 +82,11 @@
 
 ### New Database Table
 
-1. Create migration file (`supabase/migrations/010_...sql`)
+1. Create migration file (`supabase/migrations/002_...sql`)
 2. Add table with proper PK, FKs, defaults, and constraints
 3. Enable RLS
 4. Add RLS policy (admin-only, unless public)
-5. Add grants in `007_grants.sql` style
-6. Generate TypeScript types via `supabase gen types typescript --local`
+5. Add grants following the pattern in `001_initial_schema.sql`
+6. Generate TypeScript types via `npx supabase gen types typescript --local`
 7. Update `src/lib/database.types.ts` (regenerate or manual update)
 8. Update `src/lib/types.ts` if new application-level types are needed
