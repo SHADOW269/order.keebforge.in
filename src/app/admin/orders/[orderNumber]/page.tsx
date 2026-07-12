@@ -15,7 +15,7 @@ import CustomerMessageSection from "@/components/admin/order-form/CustomerMessag
 import AdminToCustomerSection from "@/components/admin/order-form/AdminToCustomerSection";
 import CustomerInfoSection from "@/components/admin/order-form/CustomerInfoSection";
 import ShippingAddressSection from "@/components/admin/order-form/ShippingAddressSection";
-import { ButtonLoader, LoadingOverlay } from "@/components/ui/Loading";
+import { ButtonLoader } from "@/components/ui/Loading";
 import { OrderDetailSkeleton } from "@/components/ui/Skeleton";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -422,6 +422,8 @@ export default function AdminOrderDetailsPage() {
         }),
         signal,
       }),
+      loadingTitle: "Adding Timeline Update...",
+      loadingDescription: "Adding status update to the order timeline.",
       successText: "Timeline updated.",
       onSuccess: (result: Record<string, unknown>) => {
         setTimeline((prev) => [result.update as OrderTimelineRow, ...prev]);
@@ -468,6 +470,8 @@ export default function AdminOrderDetailsPage() {
         body: JSON.stringify(deltaPayload),
         signal,
       }),
+      loadingTitle: "Saving Changes...",
+      loadingDescription: "Updating order details, please wait.",
       successText: "Changes saved successfully.",
       errorPrefix: "Failed to save",
       onSuccess: () => {
@@ -488,8 +492,10 @@ export default function AdminOrderDetailsPage() {
         method: "DELETE",
         signal,
       }),
-      successText: "Order archived.",
-      destructive: true,
+      loadingTitle: "Archiving Order...",
+      loadingDescription: "Moving order to archive.",
+      successTitle: "Archived",
+      successText: "Order has been archived.",
       onSuccess: () => router.push("/admin"),
       onSettled: () => setArchiving(false),
     });
@@ -717,8 +723,6 @@ export default function AdminOrderDetailsPage() {
         }}
         onCancel={() => setConfirmOpen(false)}
       />
-
-      <LoadingOverlay loading={saving || insertingTimeline} message="Processing your request..." />
     </div>
   );
 }

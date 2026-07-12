@@ -28,7 +28,7 @@ import {
   formatINR,
 } from "@/lib/types";
 import { computeBillingTotals } from "@/lib/order-compute";
-import { ButtonLoader, LoadingOverlay } from "@/components/ui/Loading";
+import { ButtonLoader } from "@/components/ui/Loading";
 import { withLoading } from "@/lib/api-mutation";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
@@ -196,6 +196,8 @@ export default function NewOrderPage() {
         body: JSON.stringify(payload),
         signal,
       }),
+      loadingTitle: "Creating Order...",
+      loadingDescription: "Creating your new order, please wait.",
       successText: "Order created successfully.",
       errorPrefix: "Failed to create order",
       onSuccess: () => router.push("/admin"),
@@ -346,7 +348,6 @@ export default function NewOrderPage() {
         </div>
       </div>
 
-      <LoadingOverlay loading={submitting} message="Creating your order..." />
     </main>
   );
 }

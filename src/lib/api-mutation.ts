@@ -1,17 +1,20 @@
 "use client";
 
 import { topProgress } from "@/lib/hooks/useTopProgress";
-import { toast } from "@/lib/hooks/useToast";
+import { taskNotification } from "@/lib/hooks/useTaskNotification";
 
 interface MutationOptions<T = unknown> {
   action: (signal: AbortSignal) => Promise<Response>;
   onSuccess?: (result: T) => void;
   onError?: (error: string) => void;
   onSettled?: () => void;
+  loadingTitle: string;
+  loadingDescription?: string;
+  successTitle?: string;
   successText: string;
+  errorTitle?: string;
   errorPrefix?: string;
   minimumDuration?: number;
-  destructive?: boolean;
 }
 
 let running = false;
@@ -26,15 +29,19 @@ export async function withLoading<T = unknown>(options: MutationOptions<T>): Pro
     onSuccess,
     onError,
     onSettled,
+    loadingTitle,
+    loadingDescription = "Please wait while your request is being processed.",
+    successTitle = "Completed",
     successText,
+    errorTitle = "Operation Failed",
     errorPrefix = "Failed",
     minimumDuration = 300,
-    destructive = false,
   } = options;
 
   const controller = new AbortController();
   activeController = controller;
 
+  const notificationId = taskNotification.loading(loadingTitle, loadingDescription);
   topProgress.start();
   const startTime = Date.now();
 
@@ -44,13 +51,14 @@ export async function withLoading<T = unknown>(options: MutationOptions<T>): Pro
       response = await action(controller.signal);
     } catch {
       if (controller.signal.aborted) {
+        taskNotification.dismiss(notificationId);
         return false;
       }
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(0, minimumDuration - elapsed);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       topProgress.error();
-      toast.error("Network error. Please try again.", destructive ? 5000 : undefined);
+      taskNotification.error(notificationId, errorTitle, "Network error. Please try again.");
       onError?.("Network error. Please try again.");
       return false;
     }
@@ -63,7 +71,7 @@ export async function withLoading<T = unknown>(options: MutationOptions<T>): Pro
       const remaining = Math.max(0, minimumDuration - elapsed);
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       topProgress.error();
-      toast.error("Unexpected server response. Please try again.", destructive ? 5000 : undefined);
+      taskNotification.error(notificationId, errorTitle, "Unexpected server response. Please try again.");
       onError?.("Unexpected server response.");
       return false;
     }
@@ -74,7 +82,7 @@ export async function withLoading<T = unknown>(options: MutationOptions<T>): Pro
       if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
       topProgress.error();
       const message = (result as Record<string, unknown>).error as string || `${errorPrefix}. Please try again.`;
-      toast.error(message, destructive ? 5000 : undefined);
+      taskNotification.error(notificationId, errorTitle, message);
       onError?.(message);
       return false;
     }
@@ -83,7 +91,7 @@ export async function withLoading<T = unknown>(options: MutationOptions<T>): Pro
     const remaining = Math.max(0, minimumDuration - elapsed);
     if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
     topProgress.complete();
-    toast.success(successText, destructive ? 5000 : undefined);
+    taskNotification.success(notificationId, successTitle, successText);
     onSuccess?.(result);
     return true;
   } catch {
@@ -91,7 +99,7 @@ export async function withLoading<T = unknown>(options: MutationOptions<T>): Pro
     const remaining = Math.max(0, minimumDuration - elapsed);
     if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
     topProgress.error();
-    toast.error("An unexpected error occurred.", destructive ? 5000 : undefined);
+    taskNotification.error(notificationId, errorTitle, "An unexpected error occurred.");
     onError?.("An unexpected error occurred.");
     return false;
   } finally {
