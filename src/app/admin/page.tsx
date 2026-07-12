@@ -6,7 +6,7 @@ import { computeDashboardStats } from "@/lib/stats";
 import { formatINR } from "@/lib/types";
 import type { AdminOrdersListRow, OrderTimelineRow } from "@/lib/types";
 import {
-  Package, Banknote, Clock, Wrench,
+  Package, Banknote, Clock, Wrench, CheckCircle2,
 } from "lucide-react";
 
 function greeting() {
@@ -65,11 +65,13 @@ export default async function AdminDashboard() {
     { name: "In Transit", value: 0, color: "#f97316" },
     { name: "Delivered", value: 0, color: "#22c55e" },
     { name: "Warranty", value: 0, color: "#14b8a6" },
+    { name: "Completed", value: 0, color: "#10b981" },
   ];
 
   for (const o of allOrders) {
     const s = o.current_status;
-    if (s === "Testing Warranty Active" || s === "Order Completed") stages[7].value++;
+    if (s === "Order Completed") stages[8].value++;
+    else if (s === "Testing Warranty Active") stages[7].value++;
     else if (s === "Delivered") stages[6].value++;
     else if (s === "In Transit") stages[5].value++;
     else if (["Completed", "Packing", "Shipment Booked", "Shipment Picked Up"].includes(s)) stages[4].value++;
@@ -156,12 +158,13 @@ export default async function AdminDashboard() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 animate-fade-up" style={{ animationDelay: "80ms" }}>
           {[
             { icon: Package, label: "Total Orders", value: String(stats.totalOrders), trend: `${stats.createdThisMonth} this month` },
             { icon: Banknote, label: "Revenue", value: formatINR(stats.totalRevenue), trend: `${formatINR(stats.revenueThisMonth)} this month`, accent: true },
             { icon: Clock, label: "Pending Orders", value: String(stats.pendingOrders), trend: `${stats.pendingPaymentsCount} unpaid` },
             { icon: Wrench, label: "Warranty Cases", value: String(stats.warrantyActive), trend: stats.avgCompletionDays !== null ? `${stats.avgCompletionDays.toFixed(1)}d avg` : "—" },
+            { icon: CheckCircle2, label: "Completed Orders", value: String(stats.completedOrders), trend: stats.totalOrders > 0 ? `${Math.round((stats.completedOrders / stats.totalOrders) * 100)}% completion rate` : "—" },
           ].map((m, i) => (
             <div key={m.label} className="rounded-xl border border-[var(--bdr)] bg-[var(--surf)] shadow-lg p-4 flex items-center gap-4">
               <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--acc-dim)]/60 shrink-0">
@@ -188,7 +191,7 @@ export default async function AdminDashboard() {
                 Production Overview
               </h2>
               <span className="text-[0.65rem] font-medium text-[var(--t3)]">
-                {allOrders.length - stages[7].value} active &middot; {allOrders.length > 0 ? Math.round((stages[7].value / allOrders.length) * 100) : 0}% complete
+                {allOrders.length - stages[7].value - stages[8].value} active &middot; {allOrders.length > 0 ? Math.round((stages[8].value / allOrders.length) * 100) : 0}% complete
               </span>
             </div>
             <div className="space-y-5">

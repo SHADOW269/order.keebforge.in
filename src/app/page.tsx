@@ -128,12 +128,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto w-full px-6 flex items-center justify-between">
           <a
             href="https://keebforge.in/"
-            className="text-sm font-bold tracking-wider uppercase transition-colors hover:text-[#c9f31d]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+            className="text-sm font-bold tracking-wider transition-colors hover:text-[var(--acc)]"
+            style={{ fontFamily: "var(--ff-d)" }}
           >
-            KeebForge<span className="text-[#c9f31d]">.</span>in
+            KeebForge<span className="text-[var(--acc)]">.</span>in
           </a>
-          <div className="hidden md:flex items-center gap-8 text-[11px] font-semibold tracking-[0.16em] uppercase text-[#9494a6]">
+          <div className="hidden md:flex items-center gap-8 text-[11px] font-semibold tracking-[0.16em] uppercase text-[var(--t3)]">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.label}

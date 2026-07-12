@@ -19,7 +19,7 @@ export default function AdminLayout({
               className="text-sm font-bold tracking-tight text-[var(--t1)]"
               style={{ fontFamily: "var(--ff-d)" }}
             >
-              KeebForge<span className="text-[var(--acc)]">.</span>
+              KeebForge<span className="text-[var(--acc)]">.</span>in
             </Link>
             <div className="flex items-center gap-1">
               <NavLink href="/admin" exact>

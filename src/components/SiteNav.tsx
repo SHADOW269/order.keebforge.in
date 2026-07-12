@@ -15,7 +15,7 @@ export default function SiteNav() {
       <div className="max-w-7xl mx-auto w-full px-6 flex items-center justify-between">
         <a
           href="https://keebforge.in/"
-          className="text-sm font-bold tracking-wider uppercase transition-colors hover:text-[var(--acc)]"
+          className="text-sm font-bold tracking-wider transition-colors hover:text-[var(--acc)]"
           style={{ fontFamily: "var(--ff-d)" }}
         >
           KeebForge<span className="text-[var(--acc)]">.</span>in
