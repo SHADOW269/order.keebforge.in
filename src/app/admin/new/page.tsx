@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import CustomerInfoSection from "@/components/admin/order-form/CustomerInfoSection";
 import ShippingAddressSection from "@/components/admin/order-form/ShippingAddressSection";
@@ -28,6 +28,8 @@ import {
   formatINR,
 } from "@/lib/types";
 import { computeBillingTotals } from "@/lib/order-compute";
+import { ButtonLoader, LoadingOverlay } from "@/components/ui/Loading";
+import { withLoading } from "@/lib/api-mutation";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -106,8 +108,6 @@ export default function NewOrderPage() {
   const [mouseCustomWork, setMouseCustomWork] = useState<CustomWorkItem[]>([]);
 
   const [submitting, setSubmitting] = useState(false);
-  const submittingRef = useRef(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   const { subtotal: servicesSubtotal } = useMemo(
     () => computeServicesSubtotal(selectedServices, quotePrices),
@@ -126,20 +126,16 @@ export default function NewOrderPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setFormError(null);
-
-    if (submittingRef.current) return;
-    submittingRef.current = true;
 
     if (!shipping.state) {
-      setFormError("State / Union Territory is required.");
-      submittingRef.current = false;
+      const { toast } = await import("@/lib/hooks/useToast");
+      toast.error("State / Union Territory is required.");
       return;
     }
 
     if (shipping.pincode.length > 0 && shipping.pincode.length !== 6) {
-      setFormError("Pincode must be exactly 6 digits.");
-      submittingRef.current = false;
+      const { toast } = await import("@/lib/hooks/useToast");
+      toast.error("Pincode must be exactly 6 digits.");
       return;
     }
 
@@ -150,76 +146,61 @@ export default function NewOrderPage() {
     if (!phoneDigits) {
       missing.push("Phone / WhatsApp");
     } else if (phoneDigits.length !== 10) {
-      setFormError("Phone / WhatsApp must be exactly 10 digits.");
-      submittingRef.current = false;
+      const { toast } = await import("@/lib/hooks/useToast");
+      toast.error("Phone / WhatsApp must be exactly 10 digits.");
       return;
     }
     if (missing.length > 0) {
-      setFormError(`${missing.join(" & ")} ${missing.length === 1 ? "is" : "are"} required.`);
-      submittingRef.current = false;
+      const { toast } = await import("@/lib/hooks/useToast");
+      toast.error(`${missing.join(" & ")} ${missing.length === 1 ? "is" : "are"} required.`);
       return;
     }
 
     setSubmitting(true);
-    try {
-      const payload = {
-        customer_name: customer.customer_name.trim(),
-        discord_username: customer.discord_username.trim(),
-        customer_email: customer.customer_email.trim(),
-        customer_phone: `+91${customer.customer_phone.replace(/\D/g, "")}`,
-        street_address: shipping.street_address.trim(),
-        city: shipping.city.trim(),
-        pincode: shipping.pincode.trim(),
-        state: shipping.state,
-        products,
-        selected_services: selectedServices,
-        quote_prices: quotePrices,
-        custom_work: [
-          ...keyboardCustomWork.map((i) => ({ ...i, category: "keyboard" })),
-          ...mouseCustomWork.map((i) => ({ ...i, category: "mouse" })),
-        ],
-        billing,
-        estimated_total: totals.grandTotal,
-        courier: logistics.courier.trim(),
-        tracking_number: logistics.trackingNumber.trim(),
-        tracking_url: logistics.trackingUrl.trim(),
-        estimated_dispatch_date: logistics.estimatedDispatchDate || null,
-        estimated_delivery: logistics.estimatedDeliveryDate || null,
-        shipping_status: logistics.shippingStatus,
-        internal_notes: notes,
-        customer_notes: customerNotes,
-        notes: customer.customer_message.trim() || null,
-        current_status: "Order Received",
-        service_type: "Custom",
-      };
 
-      const response = await fetch("/api/orders", {
+    const payload = {
+      customer_name: customer.customer_name.trim(),
+      discord_username: customer.discord_username.trim(),
+      customer_email: customer.customer_email.trim(),
+      customer_phone: `+91${customer.customer_phone.replace(/\D/g, "")}`,
+      street_address: shipping.street_address.trim(),
+      city: shipping.city.trim(),
+      pincode: shipping.pincode.trim(),
+      state: shipping.state,
+      products,
+      selected_services: selectedServices,
+      quote_prices: quotePrices,
+      custom_work: [
+        ...keyboardCustomWork.map((i) => ({ ...i, category: "keyboard" })),
+        ...mouseCustomWork.map((i) => ({ ...i, category: "mouse" })),
+      ],
+      billing,
+      estimated_total: totals.grandTotal,
+      courier: logistics.courier.trim(),
+      tracking_number: logistics.trackingNumber.trim(),
+      tracking_url: logistics.trackingUrl.trim(),
+      estimated_dispatch_date: logistics.estimatedDispatchDate || null,
+      estimated_delivery: logistics.estimatedDeliveryDate || null,
+      shipping_status: logistics.shippingStatus,
+      internal_notes: notes,
+      customer_notes: customerNotes,
+      notes: customer.customer_message.trim() || null,
+      current_status: "Order Received",
+      service_type: "Custom",
+    };
+
+    await withLoading({
+      action: (signal) => fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      });
-
-      let result: Record<string, unknown>;
-      try {
-        result = await response.json();
-      } catch {
-        setFormError("Unexpected server response. Please try again.");
-        return;
-      }
-
-      if (!response.ok) {
-        setFormError((result.error as string) || "Failed to create order.");
-        return;
-      }
-
-      router.push("/admin");
-    } catch (err) {
-      console.error("[NewOrderPage]", err);
-      setFormError("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
-      submittingRef.current = false;
-    }
+        signal,
+      }),
+      successText: "Order created successfully.",
+      errorPrefix: "Failed to create order",
+      onSuccess: () => router.push("/admin"),
+      onSettled: () => setSubmitting(false),
+    });
   }
 
   return (
@@ -241,13 +222,6 @@ export default function NewOrderPage() {
             Create New Order<span className="text-[var(--acc)]">.</span>
           </h1>
         </div>
-
-        {/* ═══ Error Alert ═══ */}
-        {formError && (
-          <div className="mb-8 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-400 animate-slide-down" role="alert">
-            {formError}
-          </div>
-        )}
 
         {/* ═══ Form ═══ */}
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -355,20 +329,24 @@ export default function NewOrderPage() {
             >
               Cancel
             </button>
-            <button
+            <ButtonLoader
               type="submit"
-              disabled={submitting}
+              variant="primary"
+              loading={submitting}
+              loadingText="Creating..."
               onClick={(e) => {
                 const form = (e.target as HTMLElement).closest("main")?.querySelector("form");
                 if (form) form.requestSubmit();
               }}
-              className="rounded-full bg-[var(--acc)] px-6 py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.1em] text-black transition-all duration-200 hover:brightness-110 hover:shadow-[0_0_24px_var(--acc-glow)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-full px-6 py-2.5 text-[0.65rem] font-bold uppercase tracking-[0.1em] hover:brightness-110 hover:shadow-[0_0_24px_var(--acc-glow)]"
             >
-              {submitting ? "Creating..." : "Create Order"}
-            </button>
+              Create Order
+            </ButtonLoader>
           </div>
         </div>
       </div>
+
+      <LoadingOverlay loading={submitting} message="Creating your order..." />
     </main>
   );
 }

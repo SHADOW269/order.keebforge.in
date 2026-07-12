@@ -15,10 +15,14 @@ import CustomerMessageSection from "@/components/admin/order-form/CustomerMessag
 import AdminToCustomerSection from "@/components/admin/order-form/AdminToCustomerSection";
 import CustomerInfoSection from "@/components/admin/order-form/CustomerInfoSection";
 import ShippingAddressSection from "@/components/admin/order-form/ShippingAddressSection";
-import { FullPageLoading } from "@/components/ui/Loading";
+import { ButtonLoader, LoadingOverlay } from "@/components/ui/Loading";
+import { OrderDetailSkeleton } from "@/components/ui/Skeleton";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 import { SectionCard } from "@/components/ui/Card";
 import { computeBillingTotals } from "@/lib/order-compute";
+import { withLoading } from "@/lib/api-mutation";
+import { toast } from "@/lib/hooks/useToast";
 import type {
   ProductEntry,
   SelectedServices,
@@ -136,12 +140,14 @@ export default function AdminOrderDetailsPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [fatalError, setFatalError] = useState<string | null>(null);
 
   const [newTimelineStatus, setNewTimelineStatus] = useState<OrderStatus>(ORDER_STATUSES[0]);
   const [newTimelineNote, setNewTimelineNote] = useState("");
   const [insertingTimeline, setInsertingTimeline] = useState(false);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const { subtotal: servicesSubtotal } = useMemo(
     () => computeServicesSubtotal(selectedServices, quotePrices),
@@ -202,13 +208,22 @@ export default function AdminOrderDetailsPage() {
   }, [currentFormState, initialSnapshot]);
 
   useEffect(() => {
+    if (!saving) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [saving]);
+
+  useEffect(() => {
     if (!orderNumber) return;
 
     async function fetchOrderData() {
       setLoading(true);
-      setGlobalError(null);
+      setFatalError(null);
 
-      // Fetch order with all related data via joins
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .select(`
@@ -223,7 +238,7 @@ export default function AdminOrderDetailsPage() {
         .single();
 
       if (orderError || !orderData) {
-        setGlobalError("Order not found.");
+        setFatalError("Order not found.");
         setLoading(false);
         return;
       }
@@ -283,7 +298,6 @@ export default function AdminOrderDetailsPage() {
 
       setProducts(Array.isArray(productsData) ? productsData.map((p: { id: string; type: string; name: string }) => ({ id: p.id, type: p.type as ProductEntry["type"], name: p.name })) : []);
 
-      // Convert order_services -> SelectedServices
       const svcMap: SelectedServices = {};
       if (Array.isArray(servicesData)) {
         for (const s of servicesData as Array<{ service_id: string; quantity: number }>) {
@@ -319,7 +333,6 @@ export default function AdminOrderDetailsPage() {
       setCustomerMessage((messagesData as Array<{ message: string }> | null)?.[0]?.message || null);
       setQuotePrices({});
 
-      // Split custom work by category
       const kb: CustomWorkItem[] = [];
       const ms: CustomWorkItem[] = [];
       if (Array.isArray(customWorkData)) {
@@ -349,7 +362,6 @@ export default function AdminOrderDetailsPage() {
 
       setNewTimelineStatus(orderData.current_status || ORDER_STATUSES[0]);
 
-      // Build snapshot
       const snapshot = {
         customer_name: customer?.name || "",
         discord_username: customer?.discord_username || "",
@@ -370,7 +382,7 @@ export default function AdminOrderDetailsPage() {
         tracking_number: shipping?.tracking_number ?? "",
         tracking_url: shipping?.tracking_url ?? "",
         estimated_dispatch_date: shipping?.estimated_dispatch_date || null,
-        estimated_delivery: shipping?.estimated_delivery_date || null,
+        estimated_delivery_date: shipping?.estimated_delivery_date || null,
         shipping_status: shipping?.shipping_status || "Not Dispatched",
         internal_notes: Array.isArray(internalNotesData) ? internalNotesData.map(toInternalNote) : [],
         customer_notes: Array.isArray(customerNotesData) ? customerNotesData.map(toCustomerNote) : [],
@@ -400,58 +412,45 @@ export default function AdminOrderDetailsPage() {
 
     setInsertingTimeline(true);
 
-    try {
-      const response = await fetch(`/api/orders/${orderMeta.id}/timeline`, {
+    await withLoading({
+      action: (signal) => fetch(`/api/orders/${orderMeta.id}/timeline`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: newTimelineStatus,
           note: newTimelineNote || null,
         }),
-      });
+        signal,
+      }),
+      successText: "Timeline updated.",
+      onSuccess: (result: Record<string, unknown>) => {
+        setTimeline((prev) => [result.update as OrderTimelineRow, ...prev]);
+        setCurrentStatus(newTimelineStatus);
 
-      const result = await response.json();
+        if (serverSnapshot.current) {
+          (serverSnapshot.current as Record<string, unknown>).current_status = newTimelineStatus;
+        }
+        setInitialSnapshot((prev) => prev ? { ...prev, current_status: newTimelineStatus } : prev);
 
-      if (!response.ok) {
-        alert(result.error || "Failed to append update.");
-        return;
-      }
+        setOrderMeta((prev) =>
+          prev ? { ...prev, updated_at: new Date().toISOString() } : prev
+        );
 
-      setTimeline((prev) => [result.update as OrderTimelineRow, ...prev]);
-      setCurrentStatus(newTimelineStatus);
-
-      if (serverSnapshot.current) {
-        (serverSnapshot.current as Record<string, unknown>).current_status = newTimelineStatus;
-      }
-      setInitialSnapshot((prev) => prev ? { ...prev, current_status: newTimelineStatus } : prev);
-
-      setOrderMeta((prev) =>
-        prev ? { ...prev, updated_at: new Date().toISOString() } : prev
-      );
-
-      setNewTimelineNote("");
-      setSuccessMessage("Timeline updated.");
-      setTimeout(() => setSuccessMessage(null), 2500);
-    } catch (err) {
-      console.error("[TimelineSubmit]", err);
-      alert("Failed to add update.");
-    } finally {
-      setInsertingTimeline(false);
-    }
+        setNewTimelineNote("");
+      },
+      onSettled: () => setInsertingTimeline(false),
+    });
   };
 
   const handleSaveChanges = async () => {
     if (!orderMeta) return;
 
     if (!hasFormChanges) {
-      setSuccessMessage("Changes saved successfully.");
-      setTimeout(() => setSuccessMessage(null), 3000);
+      toast.info("No changes to save.");
       return;
     }
 
     setSaving(true);
-    setGlobalError(null);
-    setSuccessMessage(null);
 
     const deltaPayload: Record<string, unknown> = {};
     Object.keys(currentFormState).forEach((key) => {
@@ -462,66 +461,49 @@ export default function AdminOrderDetailsPage() {
       }
     });
 
-    try {
-      const response = await fetch(`/api/orders/${orderMeta.id}`, {
+    await withLoading({
+      action: (signal) => fetch(`/api/orders/${orderMeta.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(deltaPayload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setGlobalError(result.error || "Failed to save changes.");
-        return;
-      }
-
-      serverSnapshot.current = JSON.parse(JSON.stringify(currentFormState));
-      setInitialSnapshot(serverSnapshot.current);
-      setSuccessMessage("Changes saved successfully.");
-      setTimeout(() => setSuccessMessage(null), 4000);
-    } catch {
-      setGlobalError("Network error. Please try again.");
-    } finally {
-      setSaving(false);
-    }
+        signal,
+      }),
+      successText: "Changes saved successfully.",
+      errorPrefix: "Failed to save",
+      onSuccess: () => {
+        serverSnapshot.current = JSON.parse(JSON.stringify(currentFormState));
+        setInitialSnapshot(serverSnapshot.current);
+      },
+      onSettled: () => setSaving(false),
+    });
   };
 
   const handleDeleteOrder = async () => {
     if (!orderMeta) return;
 
-    const confirmed = confirm(
-      "Archive this order? It will be hidden but not permanently deleted."
-    );
-    if (!confirmed) return;
+    setArchiving(true);
 
-    try {
-      const response = await fetch(`/api/orders/${orderMeta.id}`, {
+    await withLoading({
+      action: (signal) => fetch(`/api/orders/${orderMeta.id}`, {
         method: "DELETE",
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result.error || "Failed to archive order.");
-        return;
-      }
-
-      router.push("/admin");
-    } catch {
-      alert("Network error. Please try again.");
-    }
+        signal,
+      }),
+      successText: "Order archived.",
+      destructive: true,
+      onSuccess: () => router.push("/admin"),
+      onSettled: () => setArchiving(false),
+    });
   };
 
   if (loading) {
-    return <FullPageLoading message="Loading order..." />;
+    return <OrderDetailSkeleton />;
   }
 
-  if (globalError && !orderMeta) {
+  if (fatalError && !orderMeta) {
     return (
       <div className="min-h-screen bg-[var(--bg)] text-[var(--t1)] flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-xl border border-red-500/20 bg-red-500/5 p-5 text-center">
-          <p className="mb-4 text-sm font-medium text-red-400">{globalError}</p>
+          <p className="mb-4 text-sm font-medium text-red-400">{fatalError}</p>
           <button
             onClick={() => router.push("/admin")}
             className="text-xs font-bold text-[var(--acc)] hover:underline"
@@ -535,16 +517,6 @@ export default function AdminOrderDetailsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--t1)] pb-32">
-      {successMessage && (
-        <div className="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[var(--acc)] px-6 py-3 text-xs font-bold tracking-wide text-black shadow-2xl">
-          ✓ {successMessage}
-        </div>
-      )}
-      {globalError && orderMeta && (
-        <div className="fixed top-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-red-600 px-6 py-3 text-xs font-bold tracking-wide text-white shadow-2xl">
-          ⚠ {globalError}
-        </div>
-      )}
 
       <header className="sticky top-0 z-40 border-b border-[var(--bdr)] bg-[var(--bg1)]/80 backdrop-blur">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
@@ -724,12 +696,29 @@ export default function AdminOrderDetailsPage() {
 
       <SaveBar
         saving={saving}
+        archiving={archiving}
         hasChanges={hasFormChanges}
         orderNumber={orderMeta?.order_number ?? ""}
         onCancel={() => router.push("/admin")}
         onSave={handleSaveChanges}
-        onDelete={handleDeleteOrder}
+        onArchiveClick={() => setConfirmOpen(true)}
       />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Archive Order?"
+        description={`Order ${orderMeta?.order_number} will be hidden from the dashboard. It can be restored later.`}
+        confirmLabel="Archive"
+        variant="danger"
+        loading={archiving}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          handleDeleteOrder();
+        }}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
+      <LoadingOverlay loading={saving || insertingTimeline} message="Processing your request..." />
     </div>
   );
 }
@@ -791,13 +780,15 @@ function TimelineCard({
               placeholder="Customer message (optional)"
               className="h-[38px] flex-1 rounded-lg border border-[var(--bdr)] bg-[var(--bg2)] p-2.5 text-xs text-[var(--t1)] outline-none focus:border-[var(--acc)]/40"
             />
-            <button
+            <ButtonLoader
               type="submit"
-              disabled={inserting}
-              className="h-[38px] whitespace-nowrap rounded-lg border border-[var(--bdr)] bg-[var(--surf)] px-4 text-xs font-bold text-[var(--t1)] transition hover:bg-[var(--bg3)] disabled:opacity-40"
+              variant="secondary"
+              loading={inserting}
+              loadingText="Adding..."
+              className="h-[38px] whitespace-nowrap px-4 text-xs"
             >
-              {inserting ? "..." : "Add"}
-            </button>
+              Add
+            </ButtonLoader>
           </div>
         </form>
       </div>
@@ -806,14 +797,15 @@ function TimelineCard({
 }
 
 function SaveBar({
-  saving, hasChanges, orderNumber, onCancel, onSave, onDelete,
+  saving, archiving, hasChanges, orderNumber, onCancel, onSave, onArchiveClick,
 }: {
   saving: boolean;
+  archiving: boolean;
   hasChanges: boolean;
   orderNumber: string;
   onCancel: () => void;
   onSave: () => void;
-  onDelete: () => void;
+  onArchiveClick: () => void;
 }) {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center border-t border-[var(--bdr)] bg-[var(--bg1)]/90 backdrop-blur-md">
@@ -826,28 +818,31 @@ function SaveBar({
           View tracking page ↗
         </button>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20"
+          <ButtonLoader
+            variant="danger"
+            loading={archiving}
+            loadingText="Archiving..."
+            onClick={onArchiveClick}
           >
             Archive
-          </button>
+          </ButtonLoader>
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-[var(--bdr)] bg-[var(--bg2)]/40 px-4 py-2.5 text-xs font-bold text-[var(--t2)] transition hover:bg-[var(--surf)] hover:text-[var(--t1)]"
+            className="btn-secondary"
           >
             Cancel
           </button>
-          <button
-            type="button"
+          <ButtonLoader
+            variant="primary"
+            loading={saving}
+            loadingText="Saving..."
+            disabled={!hasChanges}
             onClick={onSave}
-            disabled={saving || !hasChanges}
-            className="min-w-[100px] rounded-lg bg-[var(--acc)] px-5 py-2.5 text-xs font-bold text-black transition hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
+            className="min-w-[100px] justify-center"
           >
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
+            Save Changes
+          </ButtonLoader>
         </div>
       </div>
     </div>

@@ -170,6 +170,15 @@ body {
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes progressShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes checkDraw {
+  to { stroke-dashoffset: 0; }
+}
+
 /* ─── Utility Classes ────────────────────────────────────────────────────── */
 
 .animate-fade-up {

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { animate } from "animejs";
 import { createClient } from "@/lib/supabase/client";
 import { useReducedMotion } from "@/lib/hooks/useReducedMotion";
-import { cn } from "@/lib/utils";
+import { toast } from "@/lib/hooks/useToast";
+import { ButtonLoader } from "@/components/ui/Loading";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,7 +16,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const heroRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -48,7 +48,6 @@ export default function LoginPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError("");
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -58,7 +57,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      toast.error(error.message);
       return;
     }
 
@@ -149,21 +148,15 @@ export default function LoginPage() {
             />
           </div>
 
-          {error && (
-            <div className="mt-6 rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-400 animate-slide-down" role="alert">
-              {error}
-            </div>
-          )}
-
-          <button
-            disabled={loading}
-            className={cn(
-              "mt-8 w-full rounded-lg bg-[var(--acc)] py-3 font-bold text-black",
-              "transition hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
-            )}
+          <ButtonLoader
+            type="submit"
+            variant="primary"
+            loading={loading}
+            loadingText="Signing In..."
+            className="mt-8 w-full justify-center"
           >
-            {loading ? "Signing In…" : "Login"}
-          </button>
+            Login
+          </ButtonLoader>
 
           <p className="mt-8 text-center text-xs text-[var(--t3)]">
             Unauthorized access is prohibited.
