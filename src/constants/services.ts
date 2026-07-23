@@ -120,7 +120,7 @@ export const SERVICE_CATALOG: ServiceCategoryGroup[] = [
             name: "Full Stabilizer Tuning",
             description:
               "Clipping, lubing, and the bandaid mod done as one package — our most requested stab job.",
-            price: 60,
+            price: 65,
             unit: "per_stabilizer",
             popular: true,
             combo: true,

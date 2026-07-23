@@ -34,9 +34,9 @@ export function validateOrderPayload(body: Record<string, unknown>): ValidationE
     errors.push({ field: "customer_email", message: "Invalid email format" });
   }
 
-  // Customer phone — optional but if present, must be 10 digits
+  // Customer phone — optional but if present, must be 10 digits (handles +91 prefix)
   if (body.customer_phone !== undefined && body.customer_phone !== null) {
-    const phone = String(body.customer_phone).replace(/\D/g, "");
+    const phone = String(body.customer_phone).replace(/\D/g, "").replace(/^91/, "");
     if (phone && phone.length !== 10) {
       errors.push({ field: "customer_phone", message: "Must be exactly 10 digits" });
     }
