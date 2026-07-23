@@ -6,16 +6,35 @@ import { createClient } from "@/lib/supabase/server";
 import TrackDashboard from "@/components/track/TrackDashboard";
 import SiteNav from "@/components/SiteNav";
 
+const TRACKING_COLS_FULL =
+  "order_number, status, service_type, products, selected_services, custom_work, billing_summary, estimated_total, payment_status, shipping_status, tracking_number, tracking_url, courier, estimated_dispatch, estimated_delivery, customer_notes, timeline, warranty_status, warranty_start, warranty_end, created_at, updated_at";
+
+const TRACKING_COLS_BASE =
+  "order_number, status, service_type, products, selected_services, billing_summary, estimated_total, payment_status, shipping_status, tracking_number, tracking_url, courier, estimated_dispatch, estimated_delivery, customer_notes, timeline, warranty_status, warranty_start, warranty_end, created_at, updated_at";
+
 const getTrackingRecord = cache(async (orderNumber: string) => {
   const supabase = await createClient();
-  const { data } = await supabase
+  const upper = orderNumber.toUpperCase();
+
+  const { data, error } = await supabase
     .from("order_tracking")
-    .select(
-      "order_number, status, service_type, products, selected_services, custom_work, billing_summary, estimated_total, payment_status, shipping_status, tracking_number, tracking_url, courier, estimated_dispatch, estimated_delivery, customer_notes, timeline, warranty_status, warranty_start, warranty_end, created_at, updated_at"
-    )
-    .eq("order_number", orderNumber.toUpperCase())
+    .select(TRACKING_COLS_FULL)
+    .eq("order_number", upper)
     .single();
-  return data;
+
+  if (!error) return data ? { ...data, custom_work: data.custom_work ?? [] } : null;
+
+  // Fallback: column custom_work doesn't exist yet (migration pending)
+  if (error.code === "42703") {
+    const { data: fallback } = await supabase
+      .from("order_tracking")
+      .select(TRACKING_COLS_BASE)
+      .eq("order_number", upper)
+      .single();
+    return fallback ? { ...fallback, custom_work: [] } : null;
+  }
+
+  return null;
 });
 
 export async function generateMetadata({
