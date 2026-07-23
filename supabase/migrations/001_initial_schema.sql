@@ -542,6 +542,7 @@ DECLARE
   v_products             JSONB;
   v_services             JSONB;
   v_custom_notes         JSONB;
+  v_custom_work          JSONB;
   v_timeline             JSONB;
   v_billing_summary      JSONB;
 BEGIN
@@ -602,6 +603,26 @@ BEGIN
   FROM public.order_services
   WHERE order_id = p_order_id;
 
+  -- Aggregate custom work
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object(
+        'id',          id,
+        'category',    category,
+        'title',       title,
+        'description', description,
+        'price',       price,
+        'quantity',    quantity,
+        'notes',       notes
+      )
+      ORDER BY sort_order
+    ),
+    '[]'::jsonb
+  )
+  INTO v_custom_work
+  FROM public.order_custom_work
+  WHERE order_id = p_order_id;
+
   -- Aggregate admin customer notes
   SELECT COALESCE(
     jsonb_agg(
@@ -641,7 +662,7 @@ BEGIN
   -- Upsert tracking record
   INSERT INTO public.order_tracking (
     order_id, order_number, status, service_type,
-    products, selected_services, billing_summary,
+    products, selected_services, custom_work, billing_summary,
     estimated_total, payment_status,
     shipping_status, tracking_number, tracking_url, courier,
     estimated_dispatch, estimated_delivery,
@@ -650,7 +671,7 @@ BEGIN
     updated_at
   ) VALUES (
     v_order_id, v_order_number, v_current_status, v_service_type,
-    v_products, v_services, v_billing_summary,
+    v_products, v_services, v_custom_work, v_billing_summary,
     v_estimated_total, COALESCE(v_payment_status::TEXT, 'Payment Pending'),
     COALESCE(v_shipping_status::TEXT, 'Not Dispatched'),
     v_tracking_number, v_tracking_url, v_courier,
@@ -665,6 +686,7 @@ BEGIN
     service_type       = EXCLUDED.service_type,
     products           = EXCLUDED.products,
     selected_services  = EXCLUDED.selected_services,
+    custom_work        = EXCLUDED.custom_work,
     billing_summary    = EXCLUDED.billing_summary,
     estimated_total    = EXCLUDED.estimated_total,
     payment_status     = EXCLUDED.payment_status,

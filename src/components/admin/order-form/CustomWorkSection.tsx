@@ -101,7 +101,6 @@ export default function CustomWorkSection({
                 key={item.id}
                 data-cw-card
                 className="rounded-xl border border-[var(--bdr)] bg-[var(--bg1)] p-5 space-y-4 transition-all duration-200 hover:border-[var(--bdr-h)]"
-                style={reduced ? {} : { opacity: 0 }}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--t3)]">

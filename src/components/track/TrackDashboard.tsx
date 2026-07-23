@@ -21,6 +21,12 @@ interface Product {
   id: string; type: string; name: string;
 }
 
+interface CustomWorkItem {
+  id: string; category: string; title: string;
+  description: string | null; price: number; quantity: number;
+  notes: string | null;
+}
+
 interface TimelineEntry {
   status: string;
   note: string | null;
@@ -42,6 +48,7 @@ interface TrackDashboardProps {
   serviceType: string | null;
   products: Product[];
   selectedServices: Record<string, number>;
+  customWork: CustomWorkItem[];
   billingSummary: Record<string, unknown> | null;
   estimatedTotal: number | null;
   paymentStatus: string | null;
@@ -178,7 +185,7 @@ function CardHeading({ children }: { children: React.ReactNode }) {
 
 export default function TrackDashboard(props: TrackDashboardProps) {
   const {
-    orderNumber, status, serviceType, products, selectedServices,
+    orderNumber, status, serviceType, products, selectedServices, customWork,
     billingSummary, estimatedTotal, paymentStatus,
     courier, trackingNumber, trackingUrl, shippingStatus,
     estimatedDispatch, estimatedDelivery,
@@ -195,6 +202,7 @@ export default function TrackDashboard(props: TrackDashboardProps) {
   const progress = STATUS_PROGRESS[status] ?? (stageIdx >= 0 ? Math.round((stageIdx / (STAGES.length - 1)) * 100) : 0);
   const hasProducts = products?.length > 0;
   const hasServices = selectedServices && Object.keys(selectedServices).length > 0;
+  const hasCustomWork = customWork?.length > 0;
   const hasShipping = courier || trackingNumber || shippingStatus;
   const timelineGroups = groupByDate(timeline);
 
@@ -500,6 +508,49 @@ export default function TrackDashboard(props: TrackDashboardProps) {
               </div>
             </CardWrap>
           </section>
+
+          {/* ─── Custom Work ─── */}
+          {hasCustomWork && (
+            <section data-side style={reduced ? {} : { opacity: 0 }}>
+              <CardWrap>
+                <div className="p-7 md:p-8">
+                  <CardHeading>Custom Work</CardHeading>
+                  <div className="space-y-5">
+                    {(["keyboard", "mouse"] as const).map((cat) => {
+                      const items = customWork.filter((w) => w.category === cat);
+                      if (!items.length) return null;
+                      return (
+                        <div key={cat}>
+                          <p className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-[var(--acc)] mb-3" style={{ fontFamily: "var(--ff-d)" }}>
+                            {cat === "keyboard" ? "Keyboard" : "Mouse"}
+                          </p>
+                          <div className="space-y-3">
+                            {items.map((w) => (
+                              <div key={w.id} className="rounded-lg border border-[var(--bdr)] bg-[var(--bg2)] p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="text-sm font-semibold text-[var(--t1)]">{w.title}</p>
+                                  <span className="text-sm font-bold text-[var(--t1)] shrink-0" style={{ fontFamily: "var(--ff-d)" }}>
+                                    {formatINR(w.price * Math.max(1, w.quantity))}
+                                  </span>
+                                </div>
+                                {w.description && (
+                                  <p className="text-xs text-[var(--t3)] mt-1 leading-relaxed">{w.description}</p>
+                                )}
+                                <div className="flex items-center gap-3 mt-2 text-[0.65rem] text-[var(--t3)]">
+                                  {w.quantity > 1 && <span>Qty: {w.quantity}</span>}
+                                  {w.notes && <span className="truncate">Notes: {w.notes}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardWrap>
+            </section>
+          )}
 
           {/* ─── Workshop Updates ─── */}
           <section data-side style={reduced ? {} : { opacity: 0 }}>

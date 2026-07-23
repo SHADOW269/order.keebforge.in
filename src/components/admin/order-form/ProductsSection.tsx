@@ -102,7 +102,6 @@ export default function ProductsSection({
               key={entry.id}
               data-product-card
               className="flex items-center gap-3 rounded-xl border border-[var(--bdr)] bg-[var(--surf)] p-3 transition-all duration-200 hover:border-[var(--bdr-h)] focus-within:border-[var(--acc)]/20 focus-within:shadow-[0_0_0_1.5px_var(--acc),0_8px_24px_rgba(0,0,0,0.3)]"
-              style={reduced ? {} : { opacity: 0 }}
             >
               <span className="shrink-0 rounded-lg bg-[var(--acc-dim)]/60 px-2.5 py-1 text-[0.55rem] font-bold uppercase tracking-[0.15em] text-[var(--acc)]">
                 {meta.label}

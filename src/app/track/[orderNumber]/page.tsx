@@ -11,7 +11,7 @@ const getTrackingRecord = cache(async (orderNumber: string) => {
   const { data } = await supabase
     .from("order_tracking")
     .select(
-      "order_number, status, service_type, products, selected_services, billing_summary, estimated_total, payment_status, shipping_status, tracking_number, tracking_url, courier, estimated_dispatch, estimated_delivery, customer_notes, timeline, warranty_status, warranty_start, warranty_end, created_at, updated_at"
+      "order_number, status, service_type, products, selected_services, custom_work, billing_summary, estimated_total, payment_status, shipping_status, tracking_number, tracking_url, courier, estimated_dispatch, estimated_delivery, customer_notes, timeline, warranty_status, warranty_start, warranty_end, created_at, updated_at"
     )
     .eq("order_number", orderNumber.toUpperCase())
     .single();
@@ -76,6 +76,7 @@ export default async function OrderPage({
             serviceType={record.service_type}
             products={record.products ?? []}
             selectedServices={record.selected_services ?? {}}
+            customWork={record.custom_work ?? []}
             billingSummary={record.billing_summary}
             estimatedTotal={record.estimated_total}
             paymentStatus={record.payment_status}
