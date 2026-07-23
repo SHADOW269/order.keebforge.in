@@ -27,8 +27,9 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
-  const isLoginPage = request.nextUrl.pathname === "/login";
+  const pathname = request.nextUrl.pathname;
+  const isAdminRoute = pathname.startsWith("/admin");
+  const isLoginRoute = pathname === "/login";
 
   if (isAdminRoute && !user) {
     const loginUrl = request.nextUrl.clone();
@@ -36,10 +37,20 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoginPage && user) {
-    const adminUrl = request.nextUrl.clone();
-    adminUrl.pathname = "/admin";
-    return NextResponse.redirect(adminUrl);
+  if (isLoginRoute) {
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile && ["admin", "staff"].includes(profile.role)) {
+        const adminUrl = request.nextUrl.clone();
+        adminUrl.pathname = "/admin";
+        return NextResponse.redirect(adminUrl);
+      }
+    }
   }
 
   return supabaseResponse;

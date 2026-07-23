@@ -33,11 +33,12 @@ export function computeServicesSubtotal(
 
 export function computeBillingTotals(
   billing: BillingState,
-  servicesSubtotal: number
+  servicesSubtotal: number,
+  customWorkSubtotal: number = 0
 ): BillingTotals {
   const extraChargesTotal = billing.extraCharges.reduce((sum, c) => sum + (c.amount || 0), 0);
   const subtotal =
-    servicesSubtotal + (billing.shippingCost || 0) + (billing.packagingCost || 0) + extraChargesTotal;
+    servicesSubtotal + customWorkSubtotal + (billing.shippingCost || 0) + (billing.packagingCost || 0) + extraChargesTotal;
 
   const discountAmount =
     (billing.flatDiscount || 0) + (subtotal * (billing.percentageDiscount || 0)) / 100;
@@ -49,6 +50,7 @@ export function computeBillingTotals(
 
   return {
     servicesSubtotal,
+    customWorkSubtotal,
     extraChargesTotal,
     subtotal,
     discountAmount,

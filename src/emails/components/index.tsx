@@ -1,17 +1,18 @@
 import React from "react";
 import type { CSSProperties } from "react";
 import { getEmailStatusContent } from "@/constants/email-statuses";
+import { STATUS_PROGRESS } from "@/constants/order-statuses";
 
-export const PURPLE = "#A855F7";
-export const PURPLE_LIGHT = "#C084FC";
+export const PURPLE = "#C8FF00";
+export const PURPLE_LIGHT = "#DCFF4D";
 export const ORANGE = PURPLE;
 export const ORANGE_LIGHT = PURPLE_LIGHT;
-export const BG_DARK = "#0a0a0f";
-export const BG_CARD = "#0d0d14";
-export const TEXT_PRIMARY = "#f1f5f9";
-export const TEXT_SECONDARY = "#94a3b8";
-export const TEXT_MUTED = "#64748b";
-export const BORDER = "#2A1F3D";
+export const BG_DARK = "#0a0a0a";
+export const BG_CARD = "#111111";
+export const TEXT_PRIMARY = "#f0f0f0";
+export const TEXT_SECONDARY = "#a0a0a0";
+export const TEXT_MUTED = "#555555";
+export const BORDER = "#222222";
 
 export const contentStyle: CSSProperties = {
   backgroundColor: BG_DARK,
@@ -278,6 +279,12 @@ export function BetterFooter({ trackingUrl }: { trackingUrl: string }) {
 }
 
 export function getProgressPercentage(status: string): number {
+  // Try exact match from centralized mapping first
+  if (STATUS_PROGRESS[status] !== undefined) {
+    return STATUS_PROGRESS[status];
+  }
+
+  // Fuzzy fallback for emails that might receive non-canonical status strings
   const s = status.toLowerCase();
   
   if (
@@ -532,7 +539,7 @@ export function CompactTimeline({
           <table role="presentation" style={{ width: "100%", borderCollapse: "collapse" }}>
             {events.map((item, index) => {
               const isCurrent = index === 0;
-              const marker = isCurrent ? "🟣" : "✓";
+              const marker = isCurrent ? "●" : "✓";
               const titleColor = isCurrent ? PURPLE_LIGHT : TEXT_PRIMARY;
               const fontWeight = isCurrent ? "700" : "500";
               const timeDisplay = item.created_at;
@@ -575,7 +582,7 @@ export function StatusBadge({ status, emoji }: { status: string; emoji: string }
   return (
     <table role="presentation" style={{ margin: "0 auto" }}>
       <tr>
-        <td style={{ backgroundColor: "rgba(168, 85, 247, 0.08)", border: `1px solid ${PURPLE}`, borderRadius: "8px", padding: "8px 16px", textAlign: "center" }}>
+        <td style={{ backgroundColor: "rgba(200, 255, 0, 0.06)", border: `1px solid ${PURPLE}`, borderRadius: "8px", padding: "8px 16px", textAlign: "center" }}>
           <span style={{ fontSize: "14px", fontWeight: 700, color: TEXT_PRIMARY, fontFamily: "Inter, sans-serif" }}>{emoji} {status}</span>
         </td>
       </tr>

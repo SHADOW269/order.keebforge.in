@@ -8,7 +8,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
+    // Keep console.warn and console.error in production for observability.
+    removeConsole: process.env.NODE_ENV === "production"
+      ? { exclude: ["warn", "error"] }
+      : false,
   },
 
   async headers() {

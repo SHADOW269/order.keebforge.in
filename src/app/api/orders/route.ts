@@ -2,11 +2,12 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdmin } from "@/lib/api-auth";
 import { syncTrackingRecord } from "@/lib/tracking-sync";
 import { jsonSuccess, jsonError, jsonServerError, parseJsonBody } from "@/lib/api-response";
-import { rateLimitMiddleware, getClientIp } from "@/lib/rate-limit";
+import { rateLimitMiddleware } from "@/lib/rate-limit";
 import { sendOrderCreatedEmail } from "@/lib/email";
+import { validateOrderPayload } from "@/lib/validation";
 
 export async function POST(request: Request) {
-  const rateLimitResponse = rateLimitMiddleware(request, { max: 30, windowMs: 60_000 }, "orders:create");
+  const rateLimitResponse = await rateLimitMiddleware(request, { max: 30, windowMs: 60_000 }, "orders:create");
   if (rateLimitResponse) return rateLimitResponse;
 
   const auth = await requireAdmin();
@@ -15,6 +16,11 @@ export async function POST(request: Request) {
   const body = parseJsonBody(await request.text());
   if (!body) {
     return jsonError("Invalid JSON body");
+  }
+
+  const validationErrors = validateOrderPayload(body);
+  if (validationErrors.length > 0) {
+    return jsonError(validationErrors.map((e) => `${e.field}: ${e.message}`).join("; "));
   }
 
   if (!body.customer_name || !body.customer_email) {
@@ -27,6 +33,29 @@ export async function POST(request: Request) {
   }
 
   const email = (body.customer_email as string).trim().toLowerCase();
+
+  // Idempotency: reject if same customer email created an order within the last 30 seconds
+  const thirtySecsAgo = new Date(Date.now() - 30_000).toISOString();
+  const { data: customerRow } = await supabaseAdmin
+    .from("customers")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (customerRow) {
+    const { data: recentOrder } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .eq("customer_id", customerRow.id)
+      .gte("created_at", thirtySecsAgo)
+      .limit(1)
+      .maybeSingle();
+
+    if (recentOrder) {
+      return jsonError("Duplicate order detected. Please wait a moment before creating another order.", 409);
+    }
+  }
+
   const { data: existingCustomer } = await supabaseAdmin
     .from("customers")
     .select("id")
@@ -247,15 +276,19 @@ export async function POST(request: Request) {
     return jsonServerError("Failed to sync tracking record. Order was not created.");
   }
 
-  sendOrderCreatedEmail({
-    customerName: (body.customer_name as string).trim(),
-    customerEmail: email,
-    orderNumber,
-    status: (body.current_status as string) || "Order Received",
-    products: products.map((p) => ({ type: p.type, name: p.name })),
-    createdAt: new Date().toISOString(),
-    serviceType: (body.service_type as string) || "Build Service",
-  });
+  try {
+    await sendOrderCreatedEmail({
+      customerName: (body.customer_name as string).trim(),
+      customerEmail: email,
+      orderNumber,
+      status: (body.current_status as string) || "Order Received",
+      products: products.map((p) => ({ type: p.type, name: p.name })),
+      createdAt: new Date().toISOString(),
+      serviceType: (body.service_type as string) || "Build Service",
+    });
+  } catch (emailErr) {
+    console.error("[OrderCreate] Failed to send order-created email:", emailErr);
+  }
 
   return jsonSuccess({ order }, 201);
 }

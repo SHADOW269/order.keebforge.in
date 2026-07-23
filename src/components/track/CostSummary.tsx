@@ -6,16 +6,21 @@ import { formatINR } from "@/lib/types";
 export default function CostSummary({
   billing,
   selectedServices,
+  customWorkSubtotal = 0,
 }: {
   billing: BillingState;
   selectedServices: Record<string, number>;
+  customWorkSubtotal?: number;
 }) {
   const { subtotal: servicesSubtotal } = computeServicesSubtotal(selectedServices || {});
-  const totals = computeBillingTotals(billing, servicesSubtotal);
+  const totals = computeBillingTotals(billing, servicesSubtotal, customWorkSubtotal);
 
   return (
     <div className="space-y-1.5 text-sm">
       <Row label="Services" value={formatINR(servicesSubtotal)} />
+      {customWorkSubtotal > 0 && (
+        <Row label="Custom Work" value={formatINR(customWorkSubtotal)} />
+      )}
       <Row label="Shipping" value={formatINR(billing.shippingCost || 0)} />
       <Row label="Packaging" value={formatINR(billing.packagingCost || 0)} />
       {totals.discountAmount > 0 && (

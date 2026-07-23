@@ -2,17 +2,27 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { StatusBadge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/types";
 import type { AdminOrdersListRow } from "@/lib/types";
 
 interface AllOrdersTableProps {
   orders: AdminOrdersListRow[];
+  currentPage?: number;
+  totalPages?: number;
+  totalCount?: number;
 }
 
-export default function AllOrdersTable({ orders }: AllOrdersTableProps) {
+export default function AllOrdersTable({
+  orders,
+  currentPage = 1,
+  totalPages = 1,
+  totalCount = 0,
+}: AllOrdersTableProps) {
   const [query, setQuery] = useState("");
+  const router = useRouter();
 
   const filtered = useMemo(() => {
     if (!query.trim()) return orders;
@@ -23,6 +33,8 @@ export default function AllOrdersTable({ orders }: AllOrdersTableProps) {
         o.order_number.toLowerCase().includes(q),
     );
   }, [orders, query]);
+
+  const isPaginated = totalPages > 1;
 
   return (
     <>
@@ -46,9 +58,11 @@ export default function AllOrdersTable({ orders }: AllOrdersTableProps) {
           )}
         </div>
         <p className="shrink-0 text-xs text-[var(--t3)]">
-          {filtered.length === orders.length
-            ? `${orders.length} order${orders.length !== 1 ? "s" : ""}`
-            : `${filtered.length} of ${orders.length}`}
+          {query.trim()
+            ? `${filtered.length} match${filtered.length !== 1 ? "es" : ""}`
+            : isPaginated
+              ? `Page ${currentPage} of ${totalPages} (${totalCount} total)`
+              : `${totalCount} order${totalCount !== 1 ? "s" : ""}`}
         </p>
       </div>
 
@@ -111,6 +125,30 @@ export default function AllOrdersTable({ orders }: AllOrdersTableProps) {
           </div>
         )}
       </div>
+
+      {isPaginated && !query.trim() && (
+        <div className="mt-6 flex items-center justify-center gap-4">
+          <button
+            disabled={currentPage <= 1}
+            onClick={() => router.push(`/admin/orders?page=${currentPage - 1}`)}
+            className="flex items-center gap-1 rounded-lg border border-[var(--bdr)] bg-[var(--bg1)] px-3 py-2 text-xs font-medium text-[var(--t2)] transition hover:bg-[var(--surf)] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Previous
+          </button>
+          <span className="text-xs text-[var(--t3)]">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            disabled={currentPage >= totalPages}
+            onClick={() => router.push(`/admin/orders?page=${currentPage + 1}`)}
+            className="flex items-center gap-1 rounded-lg border border-[var(--bdr)] bg-[var(--bg1)] px-3 py-2 text-xs font-medium text-[var(--t2)] transition hover:bg-[var(--surf)] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
     </>
   );
 }

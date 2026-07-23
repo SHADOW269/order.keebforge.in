@@ -4,15 +4,33 @@ import type { AdminOrdersListRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function AllOrdersPage() {
+const PAGE_SIZE = 100;
+
+export default async function AllOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page || "1", 10) || 1);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
   const supabase = await createClient();
+
+  const { count } = await supabase
+    .from("admin_orders_list")
+    .select("id", { count: "exact", head: true });
 
   const { data: orders, error } = await supabase
     .from("admin_orders_list")
     .select("id, order_number, customer_name, customer_email, customer_phone, discord_username, service_type, current_status, estimated_total, created_at, updated_at, street_address, city, state, pincode, shipping_status, payment_status")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
   const allOrders = (orders ?? []) as AdminOrdersListRow[];
+  const totalCount = count ?? 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   if (error) {
     return (
@@ -43,7 +61,12 @@ export default async function AllOrdersPage() {
           </h1>
         </div>
 
-        <AllOrdersTable orders={allOrders} />
+        <AllOrdersTable
+          orders={allOrders}
+          currentPage={page}
+          totalPages={totalPages}
+          totalCount={totalCount}
+        />
       </div>
     </main>
   );

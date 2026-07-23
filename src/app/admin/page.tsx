@@ -5,6 +5,7 @@ import type { RevenueDataPoint } from "@/components/admin/DashboardCharts";
 import { computeDashboardStats } from "@/lib/stats";
 import { formatINR } from "@/lib/types";
 import type { AdminOrdersListRow, OrderTimelineRow } from "@/lib/types";
+import { createDashboardStages, bucketOrderToStage } from "@/constants/order-statuses";
 import {
   Package, Banknote, Clock, Wrench, CheckCircle2,
 } from "lucide-react";
@@ -56,29 +57,10 @@ export default async function AdminDashboard() {
   const allUpdates = (timelineData ?? []) as OrderTimelineRow[];
   const stats = computeDashboardStats(allOrders, allUpdates);
 
-  const stages = [
-    { name: "Orders Received", value: 0, color: "#3b82f6" },
-    { name: "In Queue", value: 0, color: "#9494a6" },
-    { name: "Assembly", value: 0, color: "#c9f31d" },
-    { name: "Testing", value: 0, color: "#f59e0b" },
-    { name: "Packing & Shipping", value: 0, color: "#7c6ff2" },
-    { name: "In Transit", value: 0, color: "#f97316" },
-    { name: "Delivered", value: 0, color: "#22c55e" },
-    { name: "Warranty", value: 0, color: "#14b8a6" },
-    { name: "Completed", value: 0, color: "#10b981" },
-  ];
+  const stages = createDashboardStages();
 
   for (const o of allOrders) {
-    const s = o.current_status;
-    if (s === "Order Completed") stages[8].value++;
-    else if (s === "Testing Warranty Active") stages[7].value++;
-    else if (s === "Delivered") stages[6].value++;
-    else if (s === "In Transit") stages[5].value++;
-    else if (["Completed", "Packing", "Shipment Booked", "Shipment Picked Up"].includes(s)) stages[4].value++;
-    else if (s === "Testing") stages[3].value++;
-    else if (["Parts Booked", "Parts Shipped", "Parts Received", "Work Started"].includes(s)) stages[2].value++;
-    else if (["In Queue", "Payment Pending", "Payment Received"].includes(s)) stages[1].value++;
-    else stages[0].value++;
+    bucketOrderToStage(o.current_status, stages);
   }
 
   const now = new Date();
@@ -165,7 +147,7 @@ export default async function AdminDashboard() {
             { icon: Clock, label: "Pending Orders", value: String(stats.pendingOrders), trend: `${stats.pendingPaymentsCount} unpaid` },
             { icon: Wrench, label: "Warranty Cases", value: String(stats.warrantyActive), trend: stats.avgCompletionDays !== null ? `${stats.avgCompletionDays.toFixed(1)}d avg` : "—" },
             { icon: CheckCircle2, label: "Completed Orders", value: String(stats.completedOrders), trend: stats.totalOrders > 0 ? `${Math.round((stats.completedOrders / stats.totalOrders) * 100)}% completion rate` : "—" },
-          ].map((m, i) => (
+          ].map((m) => (
             <div key={m.label} className="rounded-xl border border-[var(--bdr)] bg-[var(--surf)] shadow-lg p-4 flex items-center gap-4">
               <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[var(--acc-dim)]/60 shrink-0">
                 <m.icon className="w-[18px] h-[18px] text-[var(--acc)]" />

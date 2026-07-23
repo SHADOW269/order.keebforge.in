@@ -251,7 +251,7 @@ export default function AdminOrderClient({
   }, [keyboardCustomWork, mouseCustomWork]);
 
   const totals = useMemo(
-    () => computeBillingTotals(billing, servicesSubtotal + customWorkSubtotal),
+    () => computeBillingTotals(billing, servicesSubtotal, customWorkSubtotal),
     [billing, servicesSubtotal, customWorkSubtotal]
   );
 
@@ -300,7 +300,7 @@ export default function AdminOrderClient({
     );
     return buildSnapshot({
       ...init,
-      totals: computeBillingTotals(init.billing, svcSub + cwSub).grandTotal,
+      totals: computeBillingTotals(init.billing, svcSub, cwSub).grandTotal,
       quotePrices: {},
     });
   });
@@ -350,6 +350,27 @@ export default function AdminOrderClient({
 
     if (!hasFormChanges) {
       toast.info("No changes to save.");
+      return;
+    }
+
+    // Validate phone format if changed
+    if (customerPhone) {
+      const digits = customerPhone.replace(/\D/g, "");
+      if (digits && digits.length !== 10) {
+        toast.error("Phone / WhatsApp must be exactly 10 digits.");
+        return;
+      }
+    }
+
+    // Validate pincode format if changed
+    if (pincode && pincode.length !== 6) {
+      toast.error("Pincode must be exactly 6 digits.");
+      return;
+    }
+
+    // Validate email
+    if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      toast.error("Invalid email address.");
       return;
     }
 
@@ -504,6 +525,7 @@ export default function AdminOrderClient({
               onChange={setBilling}
               selectedServices={selectedServices}
               quotePrices={quotePrices}
+              customWorkSubtotal={customWorkSubtotal}
             />
           </SectionCard>
 

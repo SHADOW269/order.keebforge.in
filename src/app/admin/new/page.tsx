@@ -30,6 +30,7 @@ import {
 import { computeBillingTotals } from "@/lib/order-compute";
 import { ButtonLoader } from "@/components/ui/Loading";
 import { withLoading } from "@/lib/api-mutation";
+import { SectionCard } from "@/components/ui/Card";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
@@ -63,32 +64,6 @@ const INITIAL_SHIPPING: ShippingForm = {
   state: "",
 };
 
-/* ─── Section Card ───────────────────────────────────────────────── */
-
-function SectionCard({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-xl border border-[var(--bdr)] bg-[var(--surf)] shadow-lg">
-      <div className="p-6 md:p-7">
-        <p
-          className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--t3)]"
-          style={{ fontFamily: "var(--ff-d)" }}
-        >
-          {title}
-        </p>
-        <div className="mt-4 pt-4 border-t border-[var(--bdr)]">
-          {children}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ─── Page ───────────────────────────────────────────────────────── */
 
 export default function NewOrderPage() {
@@ -120,7 +95,7 @@ export default function NewOrderPage() {
   }, [keyboardCustomWork, mouseCustomWork]);
 
   const totals = useMemo(
-    () => computeBillingTotals(billing, servicesSubtotal + customWorkSubtotal),
+    () => computeBillingTotals(billing, servicesSubtotal, customWorkSubtotal),
     [billing, servicesSubtotal, customWorkSubtotal]
   );
 
@@ -279,6 +254,7 @@ export default function NewOrderPage() {
               onChange={setBilling}
               selectedServices={selectedServices}
               quotePrices={quotePrices}
+              customWorkSubtotal={customWorkSubtotal}
             />
           </SectionCard>
 

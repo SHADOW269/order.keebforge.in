@@ -17,14 +17,16 @@ export default function BillingSection({
   onChange,
   selectedServices,
   quotePrices = {},
+  customWorkSubtotal = 0,
 }: {
   billing: BillingState;
   onChange: (billing: BillingState) => void;
   selectedServices: SelectedServices;
   quotePrices?: Record<string, number>;
+  customWorkSubtotal?: number;
 }) {
   const { subtotal: servicesSubtotal, hasQuoteItems } = computeServicesSubtotal(selectedServices, quotePrices);
-  const totals = computeBillingTotals(billing, servicesSubtotal);
+  const totals = computeBillingTotals(billing, servicesSubtotal, customWorkSubtotal);
   const serviceEntries = Object.entries(selectedServices)
     .map(([id, qty]) => ({ svc: SERVICE_BY_ID[id], qty }))
     .filter((e) => e.svc);
@@ -189,6 +191,14 @@ export default function BillingSection({
       </div>
 
       <div className="rounded-xl border border-[var(--bdr)] bg-[var(--bg2)] p-5">
+        <InvoiceRow label="Services" value={formatINR(totals.servicesSubtotal)} />
+        {totals.customWorkSubtotal > 0 && (
+          <InvoiceRow label="Custom Work" value={formatINR(totals.customWorkSubtotal)} />
+        )}
+        <InvoiceRow label="Shipping & Packaging" value={formatINR((billing.shippingCost || 0) + (billing.packagingCost || 0))} muted />
+        {totals.extraChargesTotal > 0 && (
+          <InvoiceRow label="Extra Charges" value={formatINR(totals.extraChargesTotal)} muted />
+        )}
         <InvoiceRow label="Subtotal" value={formatINR(totals.subtotal)} />
         <InvoiceRow label="Discount" value={`− ${formatINR(totals.discountAmount)}`} muted />
         <InvoiceRow label="After discount" value={formatINR(totals.afterDiscount)} />

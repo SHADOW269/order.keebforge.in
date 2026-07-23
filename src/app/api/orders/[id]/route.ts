@@ -9,7 +9,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const rateLimitResponse = rateLimitMiddleware(request, { max: 60, windowMs: 60_000 }, "orders:update");
+  const rateLimitResponse = await rateLimitMiddleware(request, { max: 60, windowMs: 60_000 }, "orders:update");
   if (rateLimitResponse) return rateLimitResponse;
 
   const auth = await requireAdmin();
@@ -230,11 +230,15 @@ export async function PATCH(
     body.current_status !== undefined &&
     body.current_status !== previousStatus
   ) {
-    sendStatusChangedEmail({
-      orderId: id,
-      previousStatus: previousStatus,
-      newStatus: body.current_status as string,
-    });
+    try {
+      await sendStatusChangedEmail({
+        orderId: id,
+        previousStatus: previousStatus,
+        newStatus: body.current_status as string,
+      });
+    } catch (emailErr) {
+      console.error("[OrderUpdate] Failed to send status-changed email:", emailErr);
+    }
   }
 
   return jsonSuccess({ id });
@@ -244,7 +248,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const rateLimitResponse = rateLimitMiddleware(_request, { max: 30, windowMs: 60_000 }, "orders:delete");
+  const rateLimitResponse = await rateLimitMiddleware(_request, { max: 30, windowMs: 60_000 }, "orders:delete");
   if (rateLimitResponse) return rateLimitResponse;
 
   const auth = await requireAdmin();

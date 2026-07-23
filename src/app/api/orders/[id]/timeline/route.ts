@@ -4,12 +4,13 @@ import { syncTrackingRecord } from "@/lib/tracking-sync";
 import { jsonSuccess, jsonError, jsonServerError, parseJsonBody } from "@/lib/api-response";
 import { rateLimitMiddleware } from "@/lib/rate-limit";
 import { sendTimelineUpdateEmail } from "@/lib/email";
+import { validateTimelinePayload } from "@/lib/validation";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const rateLimitResponse = rateLimitMiddleware(request, { max: 30, windowMs: 60_000 }, "timeline:create");
+  const rateLimitResponse = await rateLimitMiddleware(request, { max: 30, windowMs: 60_000 }, "timeline:create");
   if (rateLimitResponse) return rateLimitResponse;
 
   const auth = await requireAdmin();
@@ -21,7 +22,10 @@ export async function POST(
   const body = parseJsonBody(await request.text());
   if (!body) return jsonError("Invalid JSON body");
 
-  if (!body.status) return jsonError("Status is required");
+  const validationErrors = validateTimelinePayload(body);
+  if (validationErrors.length > 0) {
+    return jsonError(validationErrors.map((e) => `${e.field}: ${e.message}`).join("; "));
+  }
 
   const { data: update, error: insertError } = await supabaseAdmin
     .from("order_timeline")
@@ -50,11 +54,15 @@ export async function POST(
     return jsonServerError("Failed to sync tracking record. Update was not saved.");
   }
 
-  sendTimelineUpdateEmail({
-    orderId: id,
-    status: body.status as string,
-    note: (body.note as string) || null,
-  });
+  try {
+    await sendTimelineUpdateEmail({
+      orderId: id,
+      status: body.status as string,
+      note: (body.note as string) || null,
+    });
+  } catch (emailErr) {
+    console.error("[Timeline] Failed to send timeline-update email:", emailErr);
+  }
 
   return jsonSuccess({ update });
 }

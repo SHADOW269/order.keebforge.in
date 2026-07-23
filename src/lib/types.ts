@@ -310,6 +310,7 @@ export const INITIAL_LOGISTICS: LogisticsState = {
 
 export interface BillingTotals {
   servicesSubtotal: number;
+  customWorkSubtotal: number;
   extraChargesTotal: number;
   subtotal: number;
   discountAmount: number;

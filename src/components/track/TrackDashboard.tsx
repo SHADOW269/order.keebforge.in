@@ -11,9 +11,9 @@ import {
   CircuitBoard, MousePointer2,
 } from "lucide-react";
 import { INITIAL_BILLING, type BillingState } from "@/lib/types";
-import { computeBillingTotals, computeServicesSubtotal } from "@/lib/order-compute";
 import { formatINR } from "@/lib/types";
 import { SERVICE_BY_ID } from "@/constants/services";
+import { STATUS_PROGRESS } from "@/constants/order-statuses";
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 
@@ -43,6 +43,7 @@ interface TrackDashboardProps {
   products: Product[];
   selectedServices: Record<string, number>;
   billingSummary: Record<string, unknown> | null;
+  estimatedTotal: number | null;
   paymentStatus: string | null;
   courier: string | null;
   trackingNumber: string | null;
@@ -77,27 +78,6 @@ const STAGE_ICONS = [
   Package, CheckCircle, CreditCard, Search, Clock, Wrench,
   Beaker, Package, Truck, PackageCheck, Shield, Award,
 ];
-
-const STAGE_PROGRESS: Record<string, number> = {
-  "Order Received": 5,
-  "Order Confirmed": 10,
-  "Payment Pending": 15,
-  "Payment Received": 20,
-  "Parts Booked": 28,
-  "Parts Shipped": 33,
-  "Parts Received": 38,
-  "In Queue": 42,
-  "Work Started": 50,
-  "Testing": 75,
-  "Completed": 80,
-  "Packing": 85,
-  "Shipment Booked": 88,
-  "Shipment Picked Up": 90,
-  "In Transit": 93,
-  "Delivered": 100,
-  "Testing Warranty Active": 100,
-  "Order Completed": 100,
-};
 
 function getStageIndex(status: string): number {
   for (let i = STAGES.length - 1; i >= 0; i--) {
@@ -199,7 +179,7 @@ function CardHeading({ children }: { children: React.ReactNode }) {
 export default function TrackDashboard(props: TrackDashboardProps) {
   const {
     orderNumber, status, serviceType, products, selectedServices,
-    billingSummary, paymentStatus,
+    billingSummary, estimatedTotal, paymentStatus,
     courier, trackingNumber, trackingUrl, shippingStatus,
     estimatedDispatch, estimatedDelivery,
     customerNotes, timeline,
@@ -212,15 +192,15 @@ export default function TrackDashboard(props: TrackDashboardProps) {
   const pctRef = useRef<HTMLSpanElement>(null);
 
   const stageIdx = getStageIndex(status);
-  const progress = STAGE_PROGRESS[status] ?? (stageIdx >= 0 ? Math.round((stageIdx / (STAGES.length - 1)) * 100) : 0);
+  const progress = STATUS_PROGRESS[status] ?? (stageIdx >= 0 ? Math.round((stageIdx / (STAGES.length - 1)) * 100) : 0);
   const hasProducts = products?.length > 0;
   const hasServices = selectedServices && Object.keys(selectedServices).length > 0;
   const hasShipping = courier || trackingNumber || shippingStatus;
   const timelineGroups = groupByDate(timeline);
 
-  const { subtotal: servicesSubtotal } = computeServicesSubtotal(selectedServices || {});
   const billing = { ...INITIAL_BILLING, ...((billingSummary ?? {}) as Partial<BillingState>) } as BillingState;
-  const totals = computeBillingTotals(billing, servicesSubtotal);
+  const grandTotal = estimatedTotal ?? 0;
+  const remainingBalance = Math.max(0, grandTotal - (billing.amountPaid || 0));
 
   useEffect(() => {
     if (reduced) return;
@@ -557,7 +537,7 @@ export default function TrackDashboard(props: TrackDashboardProps) {
                     <div className="flex items-center justify-between">
                       <span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-[var(--t3)]">Total</span>
                       <span className="text-lg font-bold text-[var(--t1)]" style={{ fontFamily: "var(--ff-d)" }}>
-                        {formatINR(totals.grandTotal)}
+                        {formatINR(grandTotal)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -567,7 +547,7 @@ export default function TrackDashboard(props: TrackDashboardProps) {
                     <div className="flex items-center justify-between pt-3 border-t border-[var(--bdr)]">
                       <span className="text-[0.6rem] font-bold uppercase tracking-[0.2em] text-[var(--t3)]">Remaining</span>
                       <span className="text-sm font-bold text-[var(--acc)]" style={{ fontFamily: "var(--ff-d)" }}>
-                        {formatINR(totals.remainingBalance)}
+                        {formatINR(remainingBalance)}
                       </span>
                     </div>
                   </div>

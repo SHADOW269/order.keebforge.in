@@ -16,24 +16,7 @@ export async function requireAdmin() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile) {
-    const { error: insertError } = await supabaseAdmin
-      .from("profiles")
-      .insert({
-        id: user.id,
-        name: user.user_metadata?.name || user.email?.split("@")[0] || "Admin",
-        email: user.email!,
-        role: "admin",
-      });
-
-    if (insertError) {
-      return { user: null as null, error: jsonForbidden() };
-    }
-
-    return { user, error: null as null };
-  }
-
-  if (!["admin", "staff"].includes(profile.role)) {
+  if (!profile || !["admin", "staff"].includes(profile.role)) {
     return { user: null as null, error: jsonForbidden() };
   }
 

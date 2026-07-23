@@ -1,57 +1,83 @@
-const ipMap = new Map<string, { count: number; resetAt: number }>();
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export interface RateLimitConfig {
   max: number;
   windowMs: number;
 }
 
-export function rateLimit(
-  ip: string,
-  config: RateLimitConfig
-): { allowed: boolean; remaining: number; resetIn: number } {
+function getWindowStart(windowMs: number): Date {
   const now = Date.now();
-  const entry = ipMap.get(ip);
+  const windowStart = new Date(now - (now % windowMs));
+  return windowStart;
+}
 
-  if (!entry || now > entry.resetAt) {
-    ipMap.set(ip, { count: 1, resetAt: now + config.windowMs });
-    return { allowed: true, remaining: config.max - 1, resetIn: config.windowMs };
+export async function checkRateLimit(
+  key: string,
+  config: RateLimitConfig
+): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
+  const windowStart = getWindowStart(config.windowMs);
+  const windowKey = `${key}:${windowStart.getTime()}`;
+  const now = Date.now();
+  const resetIn = config.windowMs - (now % config.windowMs);
+
+  const { data, error } = await supabaseAdmin
+    .from("rate_limits")
+    .select("count")
+    .eq("key", windowKey)
+    .maybeSingle();
+
+  if (error) {
+    // If the table doesn't exist or query fails, allow the request
+    // (fail open for availability)
+    return { allowed: true, remaining: config.max - 1, resetIn };
   }
 
-  entry.count++;
+  const currentCount = data?.count ?? 0;
 
-  if (entry.count > config.max) {
-    return { allowed: false, remaining: 0, resetIn: entry.resetAt - now };
+  if (currentCount >= config.max) {
+    return { allowed: false, remaining: 0, resetIn };
   }
 
-  return { allowed: true, remaining: config.max - entry.count, resetIn: entry.resetAt - now };
+  // Upsert the counter
+  const { error: upsertError } = await supabaseAdmin
+    .from("rate_limits")
+    .upsert(
+      { key: windowKey, count: currentCount + 1, window_start: windowStart.toISOString() },
+      { onConflict: "key", ignoreDuplicates: false }
+    );
+
+  if (upsertError) {
+    // Upsert failed — allow the request (fail open)
+    return { allowed: true, remaining: config.max - currentCount - 1, resetIn };
+  }
+
+  return {
+    allowed: true,
+    remaining: config.max - currentCount - 1,
+    resetIn,
+  };
 }
 
 export function getClientIp(request: Request): string {
+  // On Vercel, x-forwarded-for is set by the platform and is trusted.
+  // For other platforms, fall back to a safe default.
   const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return "127.0.0.1";
-}
-
-const CLEANUP_INTERVAL = 600_000;
-let lastCleanup = 0;
-
-function cleanup() {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
-  lastCleanup = now;
-  for (const [key, entry] of ipMap) {
-    if (now > entry.resetAt) ipMap.delete(key);
+  if (forwarded) {
+    // Take the first IP (the original client) and validate format
+    const ip = forwarded.split(",")[0]?.trim();
+    if (ip && /^[\d.:a-fA-F]+$/.test(ip)) return ip;
   }
+  return "unknown";
 }
 
-export function rateLimitMiddleware(
+export async function rateLimitMiddleware(
   request: Request,
   config: RateLimitConfig,
   label?: string
-): Response | null {
-  cleanup();
+): Promise<Response | null> {
   const ip = getClientIp(request);
-  const result = rateLimit(ip, config);
+  const key = label ? `${label}:${ip}` : ip;
+  const result = await checkRateLimit(key, config);
 
   if (!result.allowed) {
     return new Response(

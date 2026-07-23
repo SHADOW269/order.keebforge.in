@@ -77,6 +77,7 @@ export default async function OrderPage({
             products={record.products ?? []}
             selectedServices={record.selected_services ?? {}}
             billingSummary={record.billing_summary}
+            estimatedTotal={record.estimated_total}
             paymentStatus={record.payment_status}
             courier={record.courier}
             trackingNumber={record.tracking_number}
